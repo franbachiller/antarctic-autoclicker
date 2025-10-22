@@ -5,9 +5,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Key');
-  
+
   if (req.method === 'OPTIONS') return res.status(200).end();
-  
+
   // Auth
   const adminKey = req.headers['x-admin-key'];
   if (adminKey !== process.env.ADMIN_KEY) {
@@ -16,14 +16,14 @@ export default async function handler(req, res) {
 
   try {
     const { rows } = await sql`
-      SELECT 
+      SELECT
         COUNT(*) as total,
-        COUNT(*) FILTER (WHERE NOT is_banned AND expires_at > NOW()) as active,
-        COUNT(*) FILTER (WHERE NOT is_banned AND expires_at <= NOW()) as expired,
-        COUNT(*) FILTER (WHERE is_banned) as banned
+        COUNT(*) FILTER (WHERE status = 'active' AND (expires_at IS NULL OR expires_at > NOW())) as active,
+        COUNT(*) FILTER (WHERE status = 'expired' OR (expires_at IS NOT NULL AND expires_at <= NOW())) as expired,
+        COUNT(*) FILTER (WHERE status = 'banned' OR is_banned = true) as banned
       FROM licenses
     `;
-    
+
     res.json({
       total: parseInt(rows[0].total),
       active: parseInt(rows[0].active),

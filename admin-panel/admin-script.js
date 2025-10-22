@@ -125,18 +125,31 @@ async function loadLicenses() {
 
 function renderLicenses(licenses) {
     const tbody = document.getElementById('licenses-table-body');
-    
+
     if (licenses.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="loading">No licenses found</td></tr>';
         return;
     }
 
     tbody.innerHTML = licenses.map(license => {
-        const statusClass = license.is_banned ? 'banned' : 
-                           (new Date(license.expires_at) < new Date() ? 'expired' : 'active');
-        const statusText = license.is_banned ? 'banned' : 
-                          (new Date(license.expires_at) < new Date() ? 'expired' : 'active');
-        
+        // Handle both old and new schema formats
+        const isBanned = license.is_banned || license.status === 'banned';
+        const isExpired = license.status === 'expired' ||
+                         (license.expires_at && new Date(license.expires_at) < new Date());
+        const isActive = license.status === 'active' && !isExpired && !isBanned;
+
+        let statusClass, statusText;
+        if (isBanned) {
+            statusClass = 'banned';
+            statusText = 'banned';
+        } else if (isExpired) {
+            statusClass = 'expired';
+            statusText = 'expired';
+        } else {
+            statusClass = 'active';
+            statusText = 'active';
+        }
+
         return `
             <tr>
                 <td><span class="license-key" onclick="copyToClipboard('${license.license_key}')">${license.license_key}</span></td>
@@ -148,7 +161,7 @@ function renderLicenses(licenses) {
                 <td>${license.usage_count || 0}</td>
                 <td>${license.notes || '—'}</td>
                 <td>
-                    ${!license.is_banned ? 
+                    ${!isBanned ?
                         `<button class="btn-action ban" onclick="banLicense('${license.license_key}')">BAN</button>` :
                         `<button class="btn-action delete" onclick="deleteLicense('${license.license_key}')">DELETE</button>`
                     }
@@ -332,18 +345,23 @@ async function deleteLicense(licenseKey) {
 
 function searchLicenses() {
     const query = searchInput.value.toLowerCase().trim();
-    
+
     if (!query) {
         renderLicenses(allLicenses);
         return;
     }
 
     const filtered = allLicenses.filter(license => {
+        // Handle both old and new schema formats for status
+        const isBanned = license.is_banned || license.status === 'banned';
+        const isExpired = license.status === 'expired' ||
+                         (license.expires_at && new Date(license.expires_at) < new Date());
+        const statusText = isBanned ? 'banned' : (isExpired ? 'expired' : 'active');
+
         return license.license_key.toLowerCase().includes(query) ||
                license.license_type.toLowerCase().includes(query) ||
                (license.notes && license.notes.toLowerCase().includes(query)) ||
-               (license.is_banned ? 'banned' : 
-                (new Date(license.expires_at) < new Date() ? 'expired' : 'active')).includes(query);
+               statusText.includes(query);
     });
 
     renderLicenses(filtered);
