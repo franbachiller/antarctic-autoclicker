@@ -1,14 +1,14 @@
 {
   "buildCommand": "echo 'No build needed'",
-  "outputDirectory": "admin-panel",
+  "outputDirectory": ".",
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/admin.html"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
       "source": "/(.*)",
-      "destination": "/$1"
+      "destination": "/admin-panel/$1"
     }
   ]
 }
