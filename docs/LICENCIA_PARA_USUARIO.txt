@@ -1,0 +1,65 @@
+========================================
+   ANTARCTIC - LICENCIA DE ACTIVACION
+========================================
+
+Tu clave de licencia LIFETIME:
+
+   ANTARCTIC-F257-CEC7-FAB6
+
+Tipo: Lifetime (Permanente)
+Expira: 24 de septiembre de 2125
+
+========================================
+COMO USAR:
+========================================
+
+1. Ejecuta Antarctic.exe (ubicado en carpeta "dist")
+
+2. Se abrirá una ventana solicitando tu licencia
+
+3. Ingresa la clave exactamente como aparece arriba
+
+4. Presiona "Activar Licencia"
+
+5. ¡Listo! El programa se activará automáticamente
+
+========================================
+IMPORTANTE:
+========================================
+
+- Esta licencia está bindeada a tu dispositivo
+- NO podrás usarla en otro dispositivo
+- Guarda esta clave en un lugar seguro
+- NO compartas esta clave con nadie
+
+========================================
+ERRORES RESUELTOS:
+========================================
+
+✓ Error 404 - RESUELTO
+  - Servidor actualizado con código de estado HTTP correcto
+
+✓ Error al cerrar - RESUELTO
+  - Función exit() corregida a sys.exit(0)
+
+✓ Conexión mejorada
+  - Mensajes de error más claros y específicos
+  - Manejo de SSL, timeouts y errores de red
+
+========================================
+SOPORTE:
+========================================
+
+Si encuentras problemas:
+1. Verifica tu conexión a internet
+2. Asegúrate de ingresar la clave correctamente
+3. Revisa RESUMEN_FINAL.md para más detalles
+
+Servidor de autenticación:
+https://antarctic-auth-rgaeifeja-frans-projects-593301de.vercel.app
+
+Panel de admin:
+https://antarctic-auth-rgaeifeja-frans-projects-593301de.vercel.app/admin.html
+Admin Key: admin_antarctic_2025
+
+========================================
