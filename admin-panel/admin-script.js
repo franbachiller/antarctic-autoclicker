@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://antarctic-autoclicker-1pfo7ge3p-frans-projects-593301de.vercel.app';
+const API_BASE_URL = 'https://antarctic-admin-panel-8c5w33rzj-frans-projects-593301de.vercel.app';
 let adminKey = localStorage.getItem('admin_key') || '';
 let allLicenses = [];
 let generatedLicenses = [];
