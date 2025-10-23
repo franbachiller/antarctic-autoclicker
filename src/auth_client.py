@@ -173,18 +173,18 @@ class AuthClient:
 
             if result.get('success'):
                 # Save session
-                self.session_token = result['data']['sessionToken']
-                self.license_type = result['data'].get('licenseType', 'Unknown')
+                self.session_token = result.get('sessionToken')
+                self.license_type = result.get('licenseType', 'Unknown')
 
-                if result['data'].get('expiresAt'):
+                if result.get('expiresAt'):
                     self.expires_at = datetime.fromisoformat(
-                        result['data']['expiresAt'].replace('Z', '+00:00')
+                        result['expiresAt'].replace('Z', '+00:00')
                     )
                     # License expires at the same time as session for now
                     self.license_expires = self.expires_at
 
                 self.save_session()
-                return True, result.get('message', 'Activation successful'), result['data']
+                return True, result.get('message', 'Activation successful'), result
             else:
                 return False, result.get('error', 'Activation failed'), None
 
