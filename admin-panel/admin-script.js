@@ -160,10 +160,13 @@ function renderLicenses(licenses) {
                 <td>${license.usage_count || 0}</td>
                 <td>${license.notes || '—'}</td>
                 <td>
-                    ${!isBanned ?
-                        `<button class="btn-action ban" onclick="banLicense('${license.license_key}')">BAN</button>` :
-                        `<button class="btn-action delete" onclick="deleteLicense('${license.license_key}')">DELETE</button>`
-                    }
+                    <div style="display: flex; gap: 0.5rem;">
+                        ${!isBanned ?
+                            `<button class="btn-action ban" onclick="banLicense('${license.license_key}')">BAN</button>` :
+                            ''
+                        }
+                        <button class="btn-action delete" onclick="deleteLicense('${license.license_key}')">DELETE</button>
+                    </div>
                 </td>
             </tr>
         `;

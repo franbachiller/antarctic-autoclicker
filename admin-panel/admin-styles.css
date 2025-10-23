@@ -471,7 +471,7 @@ body::before {
     background: rgba(15, 23, 42, 0.7);
 }
 
-.btn-create {
+.btn-create, .btn-generate {
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     border: none;
     border-radius: 12px;
@@ -483,11 +483,47 @@ body::before {
     transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    position: relative;
+    overflow: hidden;
 }
 
-.btn-create:hover {
+.btn-create::before, .btn-generate::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-create:hover::before, .btn-generate:hover::before {
+    left: 100%;
+}
+
+.btn-create:hover, .btn-generate:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+}
+
+.btn-export {
+    background: rgba(20, 184, 166, 0.1);
+    border: 1px solid rgba(20, 184, 166, 0.3);
+    border-radius: 10px;
+    padding: 0.625rem 1.25rem;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-export:hover {
+    background: rgba(20, 184, 166, 0.2);
+    transform: translateY(-2px);
 }
 
 /* Licenses Table */
@@ -580,7 +616,8 @@ thead th {
 
 tbody tr {
     border-bottom: 1px solid var(--border);
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease;
+    opacity: 1;
 }
 
 tbody tr:hover {
@@ -638,38 +675,40 @@ tbody td {
     gap: 0.5rem;
 }
 
-.action-btn {
+.action-btn, .btn-action {
     padding: 0.5rem 1rem;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
-    border: none;
+    transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    border: 1px solid;
 }
 
-.action-btn.ban {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--danger);
-    border: 1px solid rgba(239, 68, 68, 0.3);
+.action-btn.ban, .btn-action.ban {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.1));
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.4);
 }
 
-.action-btn.ban:hover {
-    background: rgba(239, 68, 68, 0.2);
+.action-btn.ban:hover, .btn-action.ban:hover {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.15));
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
-.action-btn.delete {
-    background: rgba(148, 163, 184, 0.1);
-    color: var(--text-muted);
-    border: 1px solid var(--border);
+.action-btn.delete, .btn-action.delete {
+    background: linear-gradient(135deg, rgba(71, 85, 105, 0.15), rgba(71, 85, 105, 0.1));
+    color: #94a3b8;
+    border-color: rgba(148, 163, 184, 0.4);
 }
 
-.action-btn.delete:hover {
-    background: rgba(148, 163, 184, 0.2);
+.action-btn.delete:hover, .btn-action.delete:hover {
+    background: linear-gradient(135deg, rgba(71, 85, 105, 0.25), rgba(71, 85, 105, 0.15));
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(71, 85, 105, 0.3);
 }
 
 /* Responsive Design */
