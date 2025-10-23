@@ -14,6 +14,28 @@ export default async function handler(req, res) {
   }
 
   try {
+    // First ensure the licenses table exists
+    await sql`CREATE TABLE IF NOT EXISTS licenses (
+      id SERIAL PRIMARY KEY,
+      license_key VARCHAR(255) UNIQUE NOT NULL,
+      license_type VARCHAR(50) NOT NULL,
+      status VARCHAR(20) DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      expires_at TIMESTAMP,
+      last_used TIMESTAMP,
+      usage_count INTEGER DEFAULT 0,
+      notes TEXT,
+      is_banned BOOLEAN DEFAULT false,
+      hwid VARCHAR(255),
+      max_devices INTEGER DEFAULT 1,
+      ip_address VARCHAR(45)
+    )`;
+
+    // Create indexes if they don't exist
+    await sql`CREATE INDEX IF NOT EXISTS idx_licenses_key ON licenses(license_key)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_licenses_expires ON licenses(expires_at)`;
+
     const { licenseType, count = 1, notes } = req.body;
 
     const durations = {
