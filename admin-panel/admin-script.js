@@ -290,9 +290,12 @@ function exportToTextFile() {
 }
 
 async function banLicense(licenseKey) {
-    if (!confirm(`Are you sure you want to ban license:\n${licenseKey}?`)) {
-        return;
-    }
+    const confirmed = await showConfirmModal(
+        'Ban License',
+        `Are you sure you want to ban this license?\n\n${licenseKey}\n\nThe license will be marked as banned and will no longer work.`
+    );
+
+    if (!confirmed) return;
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/admin/ban-license`, {
@@ -301,7 +304,7 @@ async function banLicense(licenseKey) {
                 'Content-Type': 'application/json',
                 'X-Admin-Key': adminKey
             },
-            body: JSON.stringify({ licenseKey })
+            body: JSON.stringify({ license_key: licenseKey })
         });
 
         if (response.ok) {
@@ -318,9 +321,12 @@ async function banLicense(licenseKey) {
 }
 
 async function deleteLicense(licenseKey) {
-    if (!confirm(`Are you sure you want to DELETE license:\n${licenseKey}?\n\nThis action cannot be undone.`)) {
-        return;
-    }
+    const confirmed = await showConfirmModal(
+        'Delete License',
+        `Are you sure you want to PERMANENTLY DELETE this license?\n\n${licenseKey}\n\n⚠️ This action cannot be undone!`
+    );
+
+    if (!confirmed) return;
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/admin/delete-license`, {
@@ -329,7 +335,7 @@ async function deleteLicense(licenseKey) {
                 'Content-Type': 'application/json',
                 'X-Admin-Key': adminKey
             },
-            body: JSON.stringify({ licenseKey })
+            body: JSON.stringify({ license_key: licenseKey })
         });
 
         if (response.ok) {
@@ -419,6 +425,49 @@ function formatDate(dateString) {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
+    });
+}
+
+// Confirmation Modal
+function showConfirmModal(title, message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirm-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const confirmBtn = document.getElementById('modal-confirm');
+        const cancelBtn = document.getElementById('modal-cancel');
+
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        modal.classList.remove('hidden');
+
+        const handleConfirm = () => {
+            cleanup();
+            resolve(true);
+        };
+
+        const handleCancel = () => {
+            cleanup();
+            resolve(false);
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                cleanup();
+                resolve(false);
+            }
+        };
+
+        const cleanup = () => {
+            modal.classList.add('hidden');
+            confirmBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+            document.removeEventListener('keydown', handleEscape);
+        };
+
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        document.addEventListener('keydown', handleEscape);
     });
 }
 
