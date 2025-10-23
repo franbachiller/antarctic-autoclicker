@@ -103,7 +103,12 @@ async function loadStats() {
 }
 
 async function loadLicenses() {
+    const loadingOverlay = document.getElementById('table-loading-overlay');
+
     try {
+        // Show loading overlay
+        loadingOverlay.classList.remove('hidden');
+
         const response = await fetch(`${API_BASE_URL}/api/admin/licenses`, {
             headers: {
                 'X-Admin-Key': adminKey
@@ -115,10 +120,15 @@ async function loadLicenses() {
             renderLicenses(allLicenses);
         } else {
             showNotification('Failed to load licenses', 'error');
+            renderLicenses([]);
         }
     } catch (error) {
         console.error('Error loading licenses:', error);
         showNotification('Error loading licenses', 'error');
+        renderLicenses([]);
+    } finally {
+        // Hide loading overlay
+        loadingOverlay.classList.add('hidden');
     }
 }
 
@@ -126,7 +136,17 @@ function renderLicenses(licenses) {
     const tbody = document.getElementById('licenses-table-body');
 
     if (licenses.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="loading">No licenses found</td></tr>';
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="padding: 0; border: none;">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-title">No Licenses Found</div>
+                        <div class="empty-state-message">Create your first license to get started</div>
+                    </div>
+                </td>
+            </tr>
+        `;
         return;
     }
 

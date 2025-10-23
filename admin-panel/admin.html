@@ -129,7 +129,10 @@
                         <input type="text" id="search-input" class="search-input" placeholder="Search by key, type, or notes...">
                     </div>
                 </div>
-                <div class="card">
+                <div class="card" style="position: relative;">
+                    <div id="table-loading-overlay" class="table-loading-overlay hidden">
+                        <div class="loading-spinner"></div>
+                    </div>
                     <div class="table-container">
                         <table class="licenses-table">
                             <thead>
@@ -146,9 +149,7 @@
                                 </tr>
                             </thead>
                             <tbody id="licenses-table-body">
-                                <tr>
-                                    <td colspan="9" class="loading">Loading licenses...</td>
-                                </tr>
+                                <!-- Licenses will be loaded here -->
                             </tbody>
                         </table>
                     </div>
