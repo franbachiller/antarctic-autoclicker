@@ -160,3 +160,7 @@ Thumbs.db
 *.temp
 .cache/
 .vercel
+
+# Node.js
+node_modules/
+package-lock.json
