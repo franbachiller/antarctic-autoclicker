@@ -15,11 +15,9 @@ const exportBtn = document.getElementById('export-btn');
 const searchInput = document.getElementById('search-input');
 
 function checkAuth() {
-    if (adminKey) {
-        loginScreen.classList.add('hidden');
-        adminPanel.classList.remove('hidden');
-        loadDashboard();
-    }
+    // Don't auto-login, always show login screen first
+    // User can manually login with their admin key
+    console.log('Admin panel loaded. Please login with your admin key.');
 }
 
 async function login() {
