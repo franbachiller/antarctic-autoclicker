@@ -8,7 +8,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/admin-panel/$1"
+      "destination": "/admin.html"
     }
   ]
 }

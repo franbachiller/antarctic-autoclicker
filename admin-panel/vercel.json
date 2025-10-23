@@ -3,12 +3,8 @@
   "outputDirectory": ".",
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/admin.html"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/$1"
+      "destination": "/admin.html"
     }
   ]
 }
