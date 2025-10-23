@@ -83,13 +83,13 @@ body::before {
 }
 
 .logo-text {
-    font-size: 2.5rem;
+    font-size: 2rem;
     margin-bottom: 0.5rem;
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 900;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.15em;
 }
 
 .subtitle {
@@ -183,6 +183,11 @@ body::before {
     text-align: center;
     margin-top: 1rem;
     animation: shake 0.5s ease;
+    display: none;
+}
+
+.error-message:not(:empty) {
+    display: block;
 }
 
 @keyframes shake {
