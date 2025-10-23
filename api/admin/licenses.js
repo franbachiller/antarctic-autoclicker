@@ -3,11 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
   // CORS
@@ -23,6 +22,11 @@ export default async function handler(req, res) {
 
   if (!adminKey || adminKey.trim() !== expectedKey) {
     return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // If Supabase is not configured, return empty array
+  if (!supabase) {
+    return res.json([]);
   }
 
   try {
