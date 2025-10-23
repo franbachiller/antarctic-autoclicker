@@ -38,6 +38,29 @@ export default async function handler(req, res) {
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { type = 'standard', count = 1, notes = '' } = req.body;
 
+    // Validate count
+    if (typeof count !== 'number' || count < 1 || count > 100) {
+      return res.status(400).json({
+        error: 'Count must be between 1 and 100'
+      });
+    }
+
+    // Validate type
+    const validTypes = ['standard', 'trial', '1-month', '3-month', 'lifetime'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        error: 'Invalid license type',
+        validTypes
+      });
+    }
+
+    // Validate notes
+    if (notes && notes.length > 500) {
+      return res.status(400).json({
+        error: 'Notes too long (max 500 characters)'
+      });
+    }
+
     const licenses = [];
     for (let i = 0; i < count; i++) {
       const licenseKey = generateLicenseKey();
@@ -63,7 +86,7 @@ export default async function handler(req, res) {
     res.json({ success: true, licenses: data });
   } catch (error) {
     console.error('Create license error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to create license' });
   }
 }
 

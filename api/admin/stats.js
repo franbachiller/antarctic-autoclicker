@@ -1,13 +1,33 @@
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit } from '../middleware/rate-limit.js';
 
 export default async function handler(req, res) {
   // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const ALLOWED_ORIGINS = [
+    'https://antarctic-autoclicker.vercel.app',
+    'http://localhost:3000'
+  ];
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Key');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  // Rate limit
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const rateCheck = checkRateLimit(clientIp, 30, 60000);
+
+  if (!rateCheck.allowed) {
+    return res.status(429).json({
+      error: 'Too many requests',
+      retryAfter: rateCheck.retryAfter
+    });
   }
 
   // Check admin key

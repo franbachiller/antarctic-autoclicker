@@ -1,7 +1,39 @@
 const API_BASE_URL = '';
-let adminKey = localStorage.getItem('admin_key') || '';
+const AUTH_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+let adminKey = '';
 let allLicenses = [];
 let generatedLicenses = [];
+let csrfToken = '';
+
+function generateCSRFToken() {
+    return Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+function saveAdminKey(key) {
+    csrfToken = generateCSRFToken();
+    const authData = {
+        key: key,
+        expires: Date.now() + AUTH_TIMEOUT,
+        csrf: csrfToken
+    };
+    sessionStorage.setItem('admin_auth', JSON.stringify(authData));
+}
+
+function getAdminKey() {
+    try {
+        const authData = JSON.parse(sessionStorage.getItem('admin_auth') || '{}');
+        if (authData.expires && Date.now() > authData.expires) {
+            sessionStorage.removeItem('admin_auth');
+            return null;
+        }
+        csrfToken = authData.csrf || '';
+        return authData.key || null;
+    } catch {
+        return null;
+    }
+}
 
 const loginScreen = document.getElementById('login-screen');
 const adminPanel = document.getElementById('admin-panel');
@@ -15,9 +47,12 @@ const exportBtn = document.getElementById('export-btn');
 const searchInput = document.getElementById('search-input');
 
 function checkAuth() {
-    // Don't auto-login, always show login screen first
-    // User can manually login with their admin key
-    console.log('Admin panel loaded. Please login with your admin key.');
+    adminKey = getAdminKey();
+    if (adminKey) {
+        loginScreen.classList.add('hidden');
+        adminPanel.classList.remove('hidden');
+        loadDashboard();
+    }
 }
 
 async function login() {
@@ -40,7 +75,7 @@ async function login() {
 
         if (response.ok) {
             adminKey = key.trim();
-            localStorage.setItem('admin_key', key.trim());
+            saveAdminKey(key.trim());
             loginScreen.classList.add('hidden');
             adminPanel.classList.remove('hidden');
             loadDashboard();
@@ -65,7 +100,7 @@ function showError(message) {
 }
 
 function logout() {
-    localStorage.removeItem('admin_key');
+    sessionStorage.removeItem('admin_auth');
     adminKey = '';
     adminPanel.classList.add('hidden');
     loginScreen.classList.remove('hidden');
@@ -211,7 +246,8 @@ async function generateLicenses() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Admin-Key': adminKey
+                'X-Admin-Key': adminKey,
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify({
                 licenseType: type,
@@ -322,7 +358,8 @@ async function banLicense(licenseKey) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Admin-Key': adminKey
+                'X-Admin-Key': adminKey,
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify({ license_key: licenseKey })
         });
@@ -353,7 +390,8 @@ async function deleteLicense(licenseKey) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Admin-Key': adminKey
+                'X-Admin-Key': adminKey,
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify({ license_key: licenseKey })
         });

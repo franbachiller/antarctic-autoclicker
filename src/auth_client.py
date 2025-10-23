@@ -9,7 +9,13 @@ import platform
 import uuid
 import json
 import os
+import base64
 from datetime import datetime, timedelta
+try:
+    from cryptography.fernet import Fernet
+    HAS_FERNET = True
+except ImportError:
+    HAS_FERNET = False
 
 class AuthClient:
     def __init__(self, server_url="https://antarctic-autoclicker.vercel.app"):
@@ -81,14 +87,21 @@ class AuthClient:
                 'license_expires': self.license_expires.isoformat() if self.license_expires else None
             }
 
-            # Simple XOR encryption
             json_data = json.dumps(data)
             hwid = self.get_hwid()
-            encrypted = ''.join(chr(ord(c) ^ ord(hwid[i % len(hwid)]))
-                              for i, c in enumerate(json_data))
+
+            if HAS_FERNET:
+                # Use Fernet (AES-128) encryption
+                key = base64.urlsafe_b64encode(hashlib.sha256(hwid.encode()).digest())
+                cipher = Fernet(key)
+                encrypted = cipher.encrypt(json_data.encode())
+            else:
+                # Fallback to XOR
+                encrypted = ''.join(chr(ord(c) ^ ord(hwid[i % len(hwid)]))
+                                  for i, c in enumerate(json_data)).encode('latin1')
 
             with open(self.session_file, 'wb') as f:
-                f.write(encrypted.encode('latin1'))
+                f.write(encrypted)
             return True
         except Exception as e:
             print(f"Error saving session: {e}")
@@ -101,12 +114,20 @@ class AuthClient:
                 return False
 
             with open(self.session_file, 'rb') as f:
-                encrypted = f.read().decode('latin1')
+                encrypted = f.read()
 
-            # Decrypt
             hwid = self.get_hwid()
-            json_data = ''.join(chr(ord(c) ^ ord(hwid[i % len(hwid)]))
-                              for i, c in enumerate(encrypted))
+
+            if HAS_FERNET:
+                # Decrypt with Fernet
+                key = base64.urlsafe_b64encode(hashlib.sha256(hwid.encode()).digest())
+                cipher = Fernet(key)
+                json_data = cipher.decrypt(encrypted).decode()
+            else:
+                # Fallback XOR decrypt
+                encrypted_str = encrypted.decode('latin1')
+                json_data = ''.join(chr(ord(c) ^ ord(hwid[i % len(hwid)]))
+                                  for i, c in enumerate(encrypted_str))
 
             data = json.loads(json_data)
             self.session_token = data.get('token')
@@ -114,7 +135,6 @@ class AuthClient:
 
             if data.get('expires'):
                 self.expires_at = datetime.fromisoformat(data['expires'])
-                # Check if expired
                 if self.expires_at < datetime.now():
                     self.clear_session()
                     return False
