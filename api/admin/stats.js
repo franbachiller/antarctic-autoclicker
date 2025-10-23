@@ -10,32 +10,15 @@ export default async function handler(req, res) {
 
   // Auth - Check multiple possible header names and env var names
   const adminKey = req.headers['x-admin-key'] || req.headers['X-Admin-Key'] || req.headers['admin-key'];
-  console.log('Received admin key:', adminKey ? 'present' : 'missing');
-  console.log('Admin key length:', adminKey ? adminKey.length : 0);
-
-  // Check multiple possible environment variable names
   const expectedKey = process.env.ADMIN_KEY || process.env.VITE_ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_KEY;
-  console.log('Expected admin key:', expectedKey ? 'present' : 'missing');
-  console.log('Expected key length:', expectedKey ? expectedKey.length : 0);
-
-  // Debug all available environment variables (without exposing values)
-  console.log('Available env vars:', Object.keys(process.env).filter(key => key.includes('ADMIN') || key.includes('DB') || key.includes('POSTGRES')));
 
   if (!adminKey || adminKey.trim() !== expectedKey) {
-    console.log('Authentication failed - key mismatch');
-    console.log('Received (trimmed):', adminKey ? `"${adminKey.trim()}"` : 'null');
-    console.log('Expected (trimmed):', expectedKey ? `"${expectedKey.trim()}"` : 'null');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  console.log('Authentication successful');
-
   try {
-    console.log('Database connection test...');
     // Test database connection first
     await sql`SELECT 1`;
-
-    console.log('Database connected successfully');
 
     // First ensure the licenses table exists
     await sql`CREATE TABLE IF NOT EXISTS licenses (
@@ -54,14 +37,10 @@ export default async function handler(req, res) {
       ip_address VARCHAR(45)
     )`;
 
-    console.log('Table creation attempted');
-
     // Create indexes if they don't exist
     await sql`CREATE INDEX IF NOT EXISTS idx_licenses_key ON licenses(license_key)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses(status)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_licenses_expires ON licenses(expires_at)`;
-
-    console.log('Indexes creation attempted');
 
     const { rows } = await sql`
       SELECT
@@ -72,8 +51,6 @@ export default async function handler(req, res) {
       FROM licenses
     `;
 
-    console.log('Query executed successfully');
-
     res.json({
       total: parseInt(rows[0].total),
       active: parseInt(rows[0].active),
@@ -81,9 +58,6 @@ export default async function handler(req, res) {
       banned: parseInt(rows[0].banned)
     });
   } catch (error) {
-    console.log('Database error:', error.message);
-    console.log('Falling back to mock data due to database connection issues');
-
     // Fallback: Return mock data if database fails
     res.json({
       total: 0,

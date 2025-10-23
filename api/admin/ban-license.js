@@ -16,6 +16,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Test database connection first
+    await sql`SELECT 1`;
+
     // First ensure the licenses table exists
     await sql`CREATE TABLE IF NOT EXISTS licenses (
       id SERIAL PRIMARY KEY,
