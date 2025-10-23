@@ -32,39 +32,20 @@ async function login() {
     loginBtn.disabled = true;
 
     try {
-        // First test with the test endpoint
-        const testResponse = await fetch(`${API_BASE_URL}/api/admin/test`, {
+        const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
             headers: {
                 'X-Admin-Key': key.trim()
             }
         });
 
-        const testData = await testResponse.json();
-        console.log('Test endpoint response:', testData);
-
-        if (testData.match) {
-            // Key is correct, now try stats
-            const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
-                headers: {
-                    'X-Admin-Key': key.trim()
-                }
-            });
-
-            if (response.ok) {
-                adminKey = key.trim();
-                localStorage.setItem('admin_key', key.trim());
-                loginScreen.classList.add('hidden');
-                adminPanel.classList.remove('hidden');
-                loadDashboard();
-            } else {
-                const errorText = await response.text();
-                console.error('Stats error:', errorText);
-                showError('Stats API error. Check console.');
-                loginBtn.textContent = 'LOGIN';
-                loginBtn.disabled = false;
-            }
+        if (response.ok) {
+            adminKey = key.trim();
+            localStorage.setItem('admin_key', key.trim());
+            loginScreen.classList.add('hidden');
+            adminPanel.classList.remove('hidden');
+            loadDashboard();
         } else {
-            showError(`Invalid admin key. Debug: ${JSON.stringify(testData)}`);
+            showError('Invalid admin key');
             loginBtn.textContent = 'LOGIN';
             loginBtn.disabled = false;
         }
