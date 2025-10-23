@@ -252,7 +252,14 @@ class AuthClient:
 
             # Check if response is valid
             if response.status_code != 200:
-                # Session invalid, clear it
+                # If it's a server error (not auth error), use grace period
+                if response.status_code >= 500:
+                    # Server error - use grace period
+                    if self.session_token and self.expires_at:
+                        grace_period = self.expires_at - timedelta(hours=1)
+                        if datetime.now() < grace_period:
+                            return True, "Offline mode (server error, grace period)"
+                # Auth error (401, 403, etc.) - clear session
                 self.clear_session()
                 return False, f"Server error (code {response.status_code})"
 
