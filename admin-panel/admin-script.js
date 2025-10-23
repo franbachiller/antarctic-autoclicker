@@ -32,25 +32,45 @@ async function login() {
     loginBtn.disabled = true;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
+        // First test with the test endpoint
+        const testResponse = await fetch(`${API_BASE_URL}/api/admin/test`, {
             headers: {
                 'X-Admin-Key': key.trim()
             }
         });
 
-        if (response.ok) {
-            adminKey = key.trim();
-            localStorage.setItem('admin_key', key.trim());
-            loginScreen.classList.add('hidden');
-            adminPanel.classList.remove('hidden');
-            loadDashboard();
+        const testData = await testResponse.json();
+        console.log('Test endpoint response:', testData);
+
+        if (testData.match) {
+            // Key is correct, now try stats
+            const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
+                headers: {
+                    'X-Admin-Key': key.trim()
+                }
+            });
+
+            if (response.ok) {
+                adminKey = key.trim();
+                localStorage.setItem('admin_key', key.trim());
+                loginScreen.classList.add('hidden');
+                adminPanel.classList.remove('hidden');
+                loadDashboard();
+            } else {
+                const errorText = await response.text();
+                console.error('Stats error:', errorText);
+                showError('Stats API error. Check console.');
+                loginBtn.textContent = 'LOGIN';
+                loginBtn.disabled = false;
+            }
         } else {
-            showError('Invalid admin key');
+            showError(`Invalid admin key. Debug: ${JSON.stringify(testData)}`);
             loginBtn.textContent = 'LOGIN';
             loginBtn.disabled = false;
         }
     } catch (error) {
-        showError('Connection error. Check server URL.');
+        console.error('Login error:', error);
+        showError('Connection error: ' + error.message);
         loginBtn.textContent = 'LOGIN';
         loginBtn.disabled = false;
     }
