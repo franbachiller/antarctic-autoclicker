@@ -7,18 +7,6 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/admin-script.js",
-      "destination": "/admin-panel/admin-script.js"
-    },
-    {
-      "source": "/admin-styles.css",
-      "destination": "/admin-panel/admin-styles.css"
-    },
-    {
-      "source": "/assets/(.*)",
-      "destination": "/assets/$1"
-    },
-    {
       "source": "/(.*)",
       "destination": "/admin-panel/admin.html"
     }
