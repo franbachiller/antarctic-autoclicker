@@ -1,4 +1,4 @@
-const API_BASE_URL = '';
+const API_BASE_URL = 'https://antarctic-auth-i21fo56bm-frans-projects-593301de.vercel.app';
 let adminKey = localStorage.getItem('admin_key') || '';
 let allLicenses = [];
 let generatedLicenses = [];
