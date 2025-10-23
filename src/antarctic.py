@@ -14,6 +14,7 @@ import sys
 from PIL import Image
 from auth_client import AuthClient
 from security import SecurityGuard
+from latency_compensator import LatencyCompensator
 
 # GUI Configuration - Frutiger Aero Style
 ctk.set_appearance_mode("dark")
@@ -188,6 +189,11 @@ class ClickConfig:
         self.accel_end_multiplier = 0.5
         self.accel_duration_clicks = 50
         self.accel_duration_type = 'clicks'  # 'clicks' or 'time'
+
+        # Latency compensation parameters
+        self.latency_compensation_enabled = False
+        self.latency_devtools_port = 9222
+        self.latency_multiplier = 1.0
 
     def to_dict(self):
         data = {}
@@ -757,8 +763,16 @@ class AutoClicker:
         self.gaussian_delay = GaussianDelayEngine()
         self.acceleration_profile = AccelerationProfile()
 
+        # Latency compensation system
+        self.latency_compensator = LatencyCompensator(callback=self._latency_callback)
+
         # Predefined advanced profiles
         self.advanced_profiles = self._create_advanced_profiles()
+
+    def _latency_callback(self, event_type, data):
+        """Callback para eventos del compensador de latencia"""
+        if self.gui_callback:
+            self.gui_callback('latency_event', {'type': event_type, 'data': data})
 
     def _create_advanced_profiles(self):
         """Create predefined advanced timing profiles"""
@@ -818,6 +832,17 @@ class AutoClicker:
 
         # Start with the interval slider value (in milliseconds, convert to seconds)
         base_delay = self.config.interval / 1000.0
+
+        # Apply latency compensation FIRST (if enabled)
+        original_delay = base_delay
+        if self.config.latency_compensation_enabled and self.latency_compensator.compensation_enabled:
+            base_delay_ms = base_delay * 1000.0
+            compensated_ms = self.latency_compensator.get_compensated_delay(base_delay_ms)
+            base_delay = compensated_ms / 1000.0
+
+            # Log compensation (only occasionally to avoid spam)
+            if random.random() < 0.01:  # 1% of the time
+                print(f"[LATENCY] Original: {original_delay*1000:.2f}ms → Compensated: {base_delay*1000:.2f}ms (RTT: {self.latency_compensator.current_rtt_ms:.1f}ms)")
 
         # Apply humanization if enabled
         if self.config.humanize_enabled:
@@ -1160,6 +1185,8 @@ class AutoClicker:
 
     def stop(self):
         self.running = False
+        if self.latency_compensator:
+            self.latency_compensator.disconnect()
 
 class AdvancedTimingDialog(ctk.CTkToplevel):
     """Dialog for configuring advanced timing parameters"""
@@ -1727,6 +1754,9 @@ class AntarcticGUI(ctk.CTk):
         # Advanced timing controls
         self.create_advanced_timing_section(controls_frame)
 
+        # Latency compensation
+        self.create_latency_section(controls_frame)
+
     def create_advanced_timing_section(self, parent):
         """Advanced timing controls - compact section"""
         # Main container with fixed height
@@ -1831,6 +1861,167 @@ class AntarcticGUI(ctk.CTk):
             anchor="w"
         )
         self.timing_monitor_label.pack(side="left", fill="x", expand=True)
+
+    def create_latency_section(self, parent):
+        """Sección de compensación de latencia"""
+        # Main container
+        self.latency_section = ctk.CTkFrame(
+            parent,
+            fg_color=COLORS['bg_card'],
+            corner_radius=12,
+            border_width=1,
+            border_color=COLORS['border']
+        )
+        self.latency_section.pack(fill="x", pady=(0, 8))
+
+        # Header (clickable)
+        header = ctk.CTkFrame(self.latency_section, fg_color="transparent")
+        header.pack(fill="x", padx=12, pady=10)
+
+        # Expand/collapse indicator
+        self.latency_expand_label = ctk.CTkLabel(
+            header,
+            text="▶",
+            font=("Segoe UI", 10),
+            text_color=COLORS['text_dim'],
+            width=20
+        )
+        self.latency_expand_label.pack(side="left")
+
+        title_label = ctk.CTkLabel(
+            header,
+            text="🌐 Latency Compensation",
+            font=("Segoe UI", 11, "bold"),
+            text_color=COLORS['accent_cyan']
+        )
+        title_label.pack(side="left")
+
+        # Enable toggle
+        self.latency_enabled_var = ctk.BooleanVar(value=False)
+        self.latency_toggle = ctk.CTkSwitch(
+            header,
+            text="",
+            variable=self.latency_enabled_var,
+            command=self.toggle_latency_compensation,
+            width=40,
+            height=20,
+            progress_color=COLORS['accent_green']
+        )
+        self.latency_toggle.pack(side="right")
+
+        # Make header clickable
+        for widget in [header, self.latency_expand_label, title_label]:
+            widget.bind("<Button-1>", lambda e: self.toggle_latency_section())
+
+        # Content (collapsible) - INICIA COLAPSADO
+        self.latency_content = ctk.CTkFrame(self.latency_section, fg_color="transparent")
+        self.latency_expanded = False  # Inicia colapsado
+
+        # Port input
+        port_row = ctk.CTkFrame(self.latency_content, fg_color="transparent")
+        port_row.pack(fill="x", pady=2)
+
+        # Auto-detect button
+        self.latency_auto_btn = ctk.CTkButton(
+            port_row,
+            text="Auto",
+            width=50,
+            height=24,
+            corner_radius=6,
+            fg_color=COLORS['accent_green'],
+            hover_color=COLORS['accent_green'],
+            font=("Segoe UI", 9, "bold"),
+            command=self.auto_detect_game
+        )
+        self.latency_auto_btn.pack(side="left", padx=(0, 5))
+
+        ctk.CTkLabel(
+            port_row,
+            text="Port:",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_secondary']
+        ).pack(side="left")
+
+        self.latency_port_entry = ctk.CTkEntry(
+            port_row,
+            width=60,
+            height=24,
+            fg_color=COLORS['bg_primary'],
+            border_color=COLORS['border'],
+            text_color=COLORS['text_primary']
+        )
+        self.latency_port_entry.insert(0, "9222")
+        self.latency_port_entry.pack(side="left", padx=5)
+
+        # Connect button
+        self.latency_connect_btn = ctk.CTkButton(
+            port_row,
+            text="Connect",
+            width=65,
+            height=24,
+            corner_radius=6,
+            fg_color=COLORS['accent_blue'],
+            hover_color=COLORS['accent_cyan'],
+            font=("Segoe UI", 9),
+            command=self.connect_latency_system
+        )
+        self.latency_connect_btn.pack(side="left", padx=2)
+
+        # Calibrate button
+        self.latency_calibrate_btn = ctk.CTkButton(
+            port_row,
+            text="Calibrate",
+            width=70,
+            height=24,
+            corner_radius=6,
+            fg_color=COLORS['accent_green'],
+            hover_color=COLORS['accent_green'],
+            font=("Segoe UI", 9),
+            command=self.start_latency_calibration,
+            state="disabled"
+        )
+        self.latency_calibrate_btn.pack(side="left", padx=2)
+
+        # Stats display
+        stats_row = ctk.CTkFrame(self.latency_content, fg_color="transparent")
+        stats_row.pack(fill="x", pady=5)
+
+        self.latency_stats_label = ctk.CTkLabel(
+            stats_row,
+            text="RTT: -- ms | Avg: -- ms | Offset: -- ms",
+            font=("Consolas", 9),
+            text_color=COLORS['text_dim'],
+            anchor="w"
+        )
+        self.latency_stats_label.pack(fill="x")
+
+        # Compensation status indicator
+        status_row = ctk.CTkFrame(self.latency_content, fg_color="transparent")
+        status_row.pack(fill="x", pady=2)
+
+        self.latency_status_label = ctk.CTkLabel(
+            status_row,
+            text="⚫ Disconnected",
+            font=("Segoe UI", 9, "bold"),
+            text_color="#FF4757",
+            anchor="w"
+        )
+        self.latency_status_label.pack(side="left")
+
+        self.latency_active_label = ctk.CTkLabel(
+            status_row,
+            text="",
+            font=("Segoe UI", 9),
+            text_color=COLORS['accent_green'],
+            anchor="e"
+        )
+        self.latency_active_label.pack(side="right")
+
+        # Multiplier slider
+        self.latency_mult_slider, self.latency_mult_label = self.create_aero_slider(
+            self.latency_content, "Compensation", 0.0, 2.0, 1.0,
+            lambda v: self.clicker.latency_compensator.set_compensation_multiplier(v)
+        )
 
     def create_profile_section(self, parent):
         """Compact profile management"""
@@ -2152,13 +2343,148 @@ class AntarcticGUI(ctk.CTk):
         if self.clicker.config.acceleration_enabled:
             self.clicker.acceleration_profile.reset()
 
+    def toggle_latency_section(self):
+        """Expande/colapsa la sección de latency"""
+        if self.latency_expanded:
+            # Colapsar
+            self.latency_content.pack_forget()
+            self.latency_expand_label.configure(text="▶")
+            self.latency_expanded = False
+            # Reducir ventana
+            self.geometry("400x730")
+        else:
+            # Expandir
+            self.latency_content.pack(fill="x", padx=12, pady=(0, 10))
+            self.latency_expand_label.configure(text="▼")
+            self.latency_expanded = True
+            # Aumentar ventana para mostrar contenido
+            self.geometry("400x920")
+
+    def auto_detect_game(self):
+        """Auto-detecta el juego y el puerto"""
+        self.latency_auto_btn.configure(text="...", state="disabled")
+        self.latency_status_label.configure(text="🟡 Lanzando juego...", text_color="#FFA502")
+
+        def detect_thread():
+            port = self.clicker.latency_compensator.auto_detect_game()
+            if port:
+                self._safe_after(0, self._on_port_detected, port)
+            else:
+                self._safe_after(0, self._on_detect_failed)
+
+        threading.Thread(target=detect_thread, daemon=True).start()
+
+    def _on_port_detected(self, port):
+        """Callback cuando se detecta el puerto"""
+        self.latency_port_entry.delete(0, 'end')
+        self.latency_port_entry.insert(0, str(port))
+        self.latency_auto_btn.configure(text="Auto", state="normal")
+        self.latency_status_label.configure(text=f"🟢 Puerto {port} detectado", text_color=COLORS['accent_green'])
+
+        # Auto-conectar
+        self.connect_latency_system()
+
+    def _on_detect_failed(self):
+        """Callback cuando falla la detección"""
+        self.latency_auto_btn.configure(text="Auto", state="normal")
+        self.latency_status_label.configure(text="🔴 No se detectó el puerto", text_color="#FF4757")
+        messagebox.showerror("Error", "No se pudo detectar el puerto DevTools.\nAsegúrate de que el launcher esté configurado correctamente.")
+
+    def toggle_latency_compensation(self):
+        """Toggle latency compensation"""
+        enabled = self.latency_enabled_var.get()
+        self.clicker.config.latency_compensation_enabled = enabled
+        self.clicker.latency_compensator.enable_compensation(enabled)
+
+        if enabled:
+            self.latency_active_label.configure(text="✓ COMPENSATING", text_color=COLORS['accent_green'])
+        else:
+            self.latency_active_label.configure(text="")
+
+    def connect_latency_system(self):
+        """Conecta al sistema de latencia del juego"""
+        try:
+            port = int(self.latency_port_entry.get())
+            self.clicker.config.latency_devtools_port = port
+
+            success = self.clicker.latency_compensator.connect_to_game(port)
+
+            if success:
+                self.latency_connect_btn.configure(text="Connected", fg_color=COLORS['accent_green'])
+                self.latency_calibrate_btn.configure(state="normal")
+                self.latency_status_label.configure(text="🟢 Connected", text_color=COLORS['accent_green'])
+                messagebox.showinfo("Success", f"Conectado al puerto {port}\n\nAhora haz click en 'Calibrate' para medir la latencia.")
+            else:
+                self.latency_status_label.configure(text="🔴 Connection Failed", text_color="#FF4757")
+                messagebox.showerror("Error", "No se pudo conectar. Asegúrate de que el juego esté abierto con DevTools.")
+        except ValueError:
+            messagebox.showerror("Error", "Puerto inválido")
+
+    def start_latency_calibration(self):
+        """Inicia calibración automática"""
+        self.clicker.latency_compensator.start_calibration(duration_seconds=10)
+        self.latency_calibrate_btn.configure(text="Calibrating...", state="disabled")
+        messagebox.showinfo("Calibration", "Calibrando durante 10 segundos...\nRealiza acciones en el juego.")
+
+    def update_latency_stats(self, stats):
+        """Actualiza display de estadísticas de latencia"""
+        current = stats.get('current_rtt_ms', stats.get('current', 0))
+        avg = stats.get('avg_rtt_ms', stats.get('avg', 0))
+        offset = stats.get('optimal_offset_ms', 0)
+        text = f"RTT: {current:.1f}ms | Avg: {avg:.1f}ms | Offset: {offset:.1f}ms"
+        self.latency_stats_label.configure(text=text)
+
+    def _handle_latency_event(self, event_data):
+        """Maneja eventos del sistema de latencia"""
+        if not event_data:
+            return
+
+        event_type = event_data.get('type')
+        data = event_data.get('data')
+
+        if event_type == 'ping_update':
+            self._safe_after(0, self.update_latency_stats, data)
+        elif event_type == 'calibration_complete':
+            self._safe_after(0, self._on_calibration_complete, data)
+        elif event_type == 'calibration_failed':
+            self._safe_after(0, self._on_calibration_failed, data)
+        elif event_type == 'connected':
+            self._safe_after(0, self._on_latency_connected)
+        elif event_type == 'port_detected':
+            self._safe_after(0, self._on_port_detected, data)
+        elif event_type == 'status':
+            self._safe_after(0, lambda: self.latency_status_label.configure(text=f"🟡 {data}", text_color="#FFA502"))
+        elif event_type == 'error':
+            self._safe_after(0, lambda: messagebox.showerror("Latency Error", str(data)))
+
+    def _on_calibration_complete(self, data):
+        """Callback cuando termina la calibración"""
+        self.latency_calibrate_btn.configure(text="Calibrate", state="normal")
+        messagebox.showinfo("Calibration Complete",
+            f"Calibración completa!\n"
+            f"Muestras: {data['samples']}\n"
+            f"Offset óptimo: {data['optimal_offset_ms']:.2f}ms\n"
+            f"RTT promedio: {data['avg_rtt']:.2f}ms")
+
+    def _on_calibration_failed(self, reason):
+        """Callback cuando falla la calibración"""
+        self.latency_calibrate_btn.configure(text="Calibrate", state="normal")
+        messagebox.showerror("Calibration Failed",
+            f"Calibración fallida: {reason}\n\n"
+            f"Asegúrate de estar jugando activamente durante la calibración\n"
+            f"para generar tráfico de red.")
+
+    def _on_latency_connected(self):
+        """Callback cuando se conecta al sistema de latencia"""
+        pass
+
     def open_advanced_timing_dialog(self):
         """Open dialog for advanced timing configuration"""
         dialog = AdvancedTimingDialog(self, self.clicker.config)
         dialog.grab_set()  # Make dialog modal
         self.wait_window(dialog)  # Wait for dialog to close
 
-    def handle_callback(self, event):
+    def handle_callback(self, event, data=None):
         # Don't schedule callbacks if window is closing
         if self._is_closing:
             return
@@ -2167,6 +2493,8 @@ class AntarcticGUI(ctk.CTk):
             self._safe_after(0, self.set_burst_state, True)
         elif event == 'burst_stopped':
             self._safe_after(0, self.set_burst_state, False)
+        elif event == 'latency_event':
+            self._handle_latency_event(data)
         elif event == 'coords_captured':
             self._safe_after(0, self.update_coords)
         elif event == 'connection_changed':
@@ -2247,6 +2575,12 @@ class AntarcticGUI(ctk.CTk):
 
         # Show current delay
         parts.append(f"Delay:{self.clicker.last_delay_ms:.1f}ms")
+
+        # Show latency compensation if enabled
+        if self.clicker.config.latency_compensation_enabled and self.clicker.latency_compensator.compensation_enabled:
+            rtt = self.clicker.latency_compensator.current_rtt_ms
+            if rtt > 0:
+                parts.append(f"🌐-{rtt/2:.0f}ms")
 
         # Show Markov state if enabled
         if self.clicker.config.markov_chain_enabled:
