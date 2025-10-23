@@ -22,7 +22,7 @@ function checkAuth() {
 
 async function login() {
     const key = adminKeyInput.value.trim();
-    
+
     if (!key) {
         showError('Please enter admin key');
         return;
@@ -34,13 +34,13 @@ async function login() {
     try {
         const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
             headers: {
-                'X-Admin-Key': key
+                'X-Admin-Key': key.trim()
             }
         });
 
         if (response.ok) {
-            adminKey = key;
-            localStorage.setItem('admin_key', key);
+            adminKey = key.trim();
+            localStorage.setItem('admin_key', key.trim());
             loginScreen.classList.add('hidden');
             adminPanel.classList.remove('hidden');
             loadDashboard();

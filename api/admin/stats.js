@@ -10,7 +10,7 @@ export default async function handler(req, res) {
 
   // Auth
   const adminKey = req.headers['x-admin-key'];
-  if (adminKey !== process.env.ADMIN_KEY) {
+  if (adminKey && adminKey.trim() !== process.env.ADMIN_KEY) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
