@@ -1,12 +1,16 @@
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/",
+      "destination": "/admin-panel/admin.html"
     },
     {
-      "source": "/(.*)",
-      "destination": "/admin-panel/admin.html"
+      "source": "/admin-styles.css",
+      "destination": "/admin-panel/admin-styles.css"
+    },
+    {
+      "source": "/admin-script.js",
+      "destination": "/admin-panel/admin-script.js"
     }
   ]
 }
