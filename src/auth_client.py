@@ -69,9 +69,9 @@ class AuthClient:
         mac = ':'.join(['{:02x}'.format((uuid.getnode() >> elements) & 0xff)
                        for elements in range(0, 2*6, 2)][::-1])
 
-        # Create unique HWID
+        # Create unique HWID (64 hex characters as required by server)
         hwid_string = f"{machine_id}-{processor}-{system}-{mac}"
-        hwid = hashlib.sha256(hwid_string.encode()).hexdigest()[:32]
+        hwid = hashlib.sha256(hwid_string.encode()).hexdigest()
         return hwid
 
     def save_session(self):
@@ -183,7 +183,13 @@ class AuthClient:
 
             # Check if response is valid
             if response.status_code != 200:
-                return False, f"Server error (code {response.status_code})", None
+                # Try to get error message from response
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('error', f'Server error (code {response.status_code})')
+                    return False, error_msg, None
+                except:
+                    return False, f"Server error (code {response.status_code})", None
 
             # Try to parse JSON
             try:

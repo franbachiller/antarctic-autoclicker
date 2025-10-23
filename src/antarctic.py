@@ -769,6 +769,7 @@ class ActivationWindow(ctk.CTk):
 
         self.key_manager = KeyManager()
         self.activation_successful = False
+        self._after_ids = []  # Track scheduled callbacks
 
         self.setup_ui()
 
@@ -902,7 +903,8 @@ class ActivationWindow(ctk.CTk):
                 text_color=COLORS['accent_green']
             )
             self.activation_successful = True
-            self.after(1000, self.close_window)
+            after_id = self.after(1000, self.close_window)
+            self._after_ids.append(after_id)
         else:
             self.status_label.configure(
                 text=f"✗ {message}",
@@ -911,10 +913,21 @@ class ActivationWindow(ctk.CTk):
             self.key_entry.delete(0, 'end')
 
     def close_window(self):
+        self._cancel_all_callbacks()
         self.destroy()
 
     def exit_app(self):
+        self._cancel_all_callbacks()
         self.destroy()
+
+    def _cancel_all_callbacks(self):
+        """Cancel all scheduled after callbacks"""
+        for after_id in self._after_ids:
+            try:
+                self.after_cancel(after_id)
+            except:
+                pass
+        self._after_ids.clear()
 
     def run(self):
         self.mainloop()
@@ -940,6 +953,8 @@ class AntarcticGUI(ctk.CTk):
         self.key_manager = key_manager
         self.clicker = AutoClicker(gui_callback=self.handle_callback)
         self.profile_manager = ProfileManager(max_profiles=5)
+        self._after_ids = []  # Track scheduled callbacks
+        self._is_closing = False  # Flag to prevent callbacks after close
 
         self.setup_ui()
         self.clicker.start()
@@ -1365,18 +1380,33 @@ class AntarcticGUI(ctk.CTk):
 
 
     def handle_callback(self, event):
+        # Don't schedule callbacks if window is closing
+        if self._is_closing:
+            return
+
         if event == 'burst_started':
-            self.after(0, self.set_burst_state, True)
+            self._safe_after(0, self.set_burst_state, True)
         elif event == 'burst_stopped':
-            self.after(0, self.set_burst_state, False)
+            self._safe_after(0, self.set_burst_state, False)
         elif event == 'coords_captured':
-            self.after(0, self.update_coords)
+            self._safe_after(0, self.update_coords)
         elif event == 'connection_changed':
-            self.after(0, self.update_connection_status)
+            self._safe_after(0, self.update_connection_status)
         elif event == 'stats_update':
-            self.after(0, self.update_stats)
+            self._safe_after(0, self.update_stats)
         elif event == 'auto_burst_toggled':
-            self.after(0, self.sync_auto_burst_state)
+            self._safe_after(0, self.sync_auto_burst_state)
+
+    def _safe_after(self, delay, callback, *args):
+        """Schedule a callback and track it for cleanup"""
+        if not self._is_closing:
+            try:
+                after_id = self.after(delay, callback, *args)
+                self._after_ids.append(after_id)
+                return after_id
+            except:
+                pass
+        return None
 
     def set_burst_state(self, bursting):
         if bursting:
@@ -1386,7 +1416,7 @@ class AntarcticGUI(ctk.CTk):
             # Save last burst count before resetting
             self.clicker.last_burst_clicks = self.clicker.current_burst_clicks
             # Reset current burst counter after delay
-            self.after(3000, lambda: setattr(self.clicker, 'current_burst_clicks', 0))
+            self._safe_after(3000, lambda: setattr(self.clicker, 'current_burst_clicks', 0))
         # Update stats immediately
         self.update_stats()
 
@@ -1502,7 +1532,19 @@ class AntarcticGUI(ctk.CTk):
         pass
 
     def on_close(self):
+        self._is_closing = True
+        self._cancel_all_callbacks()
+        self.clicker.stop()
         self.destroy()
+
+    def _cancel_all_callbacks(self):
+        """Cancel all scheduled after callbacks"""
+        for after_id in self._after_ids:
+            try:
+                self.after_cancel(after_id)
+            except:
+                pass
+        self._after_ids.clear()
         
     def run(self):
         self.mainloop()
