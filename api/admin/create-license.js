@@ -8,8 +8,11 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const adminKey = req.headers['x-admin-key'];
-  if (!adminKey || adminKey.trim() !== process.env.ADMIN_KEY) {
+  // Auth - Check multiple possible header names and env var names
+  const adminKey = req.headers['x-admin-key'] || req.headers['X-Admin-Key'] || req.headers['admin-key'];
+  const expectedKey = process.env.ADMIN_KEY || process.env.VITE_ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_KEY;
+
+  if (!adminKey || adminKey.trim() !== expectedKey) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

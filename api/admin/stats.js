@@ -8,11 +8,24 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Auth
-  const adminKey = req.headers['x-admin-key'];
-  if (!adminKey || adminKey.trim() !== process.env.ADMIN_KEY) {
+  // Auth - Check multiple possible header names and env var names
+  const adminKey = req.headers['x-admin-key'] || req.headers['X-Admin-Key'] || req.headers['admin-key'];
+  console.log('Received admin key:', adminKey ? 'present' : 'missing');
+  console.log('Admin key length:', adminKey ? adminKey.length : 0);
+
+  // Check multiple possible environment variable names
+  const expectedKey = process.env.ADMIN_KEY || process.env.VITE_ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_KEY;
+  console.log('Expected admin key:', expectedKey ? 'present' : 'missing');
+  console.log('Expected key length:', expectedKey ? expectedKey.length : 0);
+
+  if (!adminKey || adminKey.trim() !== expectedKey) {
+    console.log('Authentication failed - key mismatch');
+    console.log('Received (trimmed):', adminKey ? `"${adminKey.trim()}"` : 'null');
+    console.log('Expected (trimmed):', expectedKey ? `"${expectedKey.trim()}"` : 'null');
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  console.log('Authentication successful');
 
   try {
     // First ensure the licenses table exists
