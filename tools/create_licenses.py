@@ -15,7 +15,7 @@ from datetime import datetime
 
 # Configuración
 SERVER_URL = "https://antarctic-autoclicker.vercel.app"
-ADMIN_KEY = "admin_antarctic_2025"
+ADMIN_KEY = "ADMIN_KEY_REMOVED"
 
 def create_licenses(license_type, count=1, notes=""):
     """Crear licencias en el servidor"""
