@@ -101,7 +101,7 @@ Antarctic/
 ## 🌐 License System
 
 ### Server
-- Deployed on Vercel: `https://antarctic-auth-i21fo56bm-frans-projects-593301de.vercel.app`
+- Deployed on Vercel: `https://antarctic-autoclicker.vercel.app`
 - Backend: Node.js + Supabase
 - Real-time validation
 - Admin panel included

@@ -14,7 +14,7 @@ import os
 from datetime import datetime
 
 # Configuración
-SERVER_URL = "https://antarctic-auth-rgaeifeja-frans-projects-593301de.vercel.app"
+SERVER_URL = "https://antarctic-autoclicker.vercel.app"
 ADMIN_KEY = "admin_antarctic_2025"
 
 def create_licenses(license_type, count=1, notes=""):

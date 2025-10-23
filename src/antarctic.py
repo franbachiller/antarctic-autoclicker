@@ -365,7 +365,7 @@ class ProfileManager:
         return self.current_profile
 
 class KeyManager:
-    def __init__(self, server_url="https://antarctic-auth-i21fo56bm-frans-projects-593301de.vercel.app/"):
+    def __init__(self, server_url="https://antarctic-autoclicker.vercel.app"):
         self.auth_client = AuthClient(server_url=server_url)
 
     def is_activated(self):

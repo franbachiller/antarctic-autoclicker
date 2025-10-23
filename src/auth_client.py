@@ -12,7 +12,7 @@ import os
 from datetime import datetime, timedelta
 
 class AuthClient:
-    def __init__(self, server_url="https://antarctic-auth-i21fo56bm-frans-projects-593301de.vercel.app"):
+    def __init__(self, server_url="https://antarctic-autoclicker.vercel.app"):
         """
         Initialize the authentication client
 
@@ -352,7 +352,7 @@ class AuthClient:
 # Example usage
 if __name__ == "__main__":
     # Initialize client with your Vercel URL
-    auth = AuthClient(server_url="https://antarctic-auth-i21fo56bm-frans-projects-593301de.vercel.app")
+    auth = AuthClient(server_url="https://antarctic-autoclicker.vercel.app")
 
     # Test activation
     print("Testing activation...")
