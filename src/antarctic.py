@@ -938,7 +938,7 @@ class AntarcticGUI(ctk.CTk):
     def __init__(self, key_manager):
         super().__init__()
         self.title("ANTARCTIC")
-        self.geometry("400x580")  # Ultra compact Frutiger Aero style
+        self.geometry("400x620")  # Ultra compact Frutiger Aero style
         self.resizable(False, False)
 
         # Set window icon
@@ -968,14 +968,14 @@ class AntarcticGUI(ctk.CTk):
 
     def create_header(self):
         """Frutiger Aero styled header with text logo"""
-        header_frame = ctk.CTkFrame(self, fg_color="transparent", height=60)
-        header_frame.pack(fill="x", padx=0, pady=(10, 5))
+        header_frame = ctk.CTkFrame(self, fg_color="transparent", height=70)
+        header_frame.pack(fill="x", padx=0, pady=(12, 8))
         header_frame.pack_propagate(False)
-        
+
         # Stylized text logo - Frutiger Aero style
         logo_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
         logo_frame.place(relx=0.5, rely=0.5, anchor="center")
-        
+
         # Main title - Modern professional font
         title = ctk.CTkLabel(
             logo_frame,
@@ -984,7 +984,7 @@ class AntarcticGUI(ctk.CTk):
             text_color=COLORS['accent_cyan']
         )
         title.pack()
-        
+
         # Subtle tagline
         tagline = ctk.CTkLabel(
             logo_frame,
@@ -992,7 +992,7 @@ class AntarcticGUI(ctk.CTk):
             font=("Arial", 9),
             text_color=COLORS['text_dim']
         )
-        tagline.pack(pady=(3, 0))
+        tagline.pack(pady=(4, 0))
     def create_main_content(self):
         """Create all main content in Frutiger Aero style"""
         # Main container with enhanced glass-like effect
@@ -1003,17 +1003,17 @@ class AntarcticGUI(ctk.CTk):
             border_width=2,
             border_color=COLORS['accent_blue']
         )
-        main_container.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        
+        main_container.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+
         # Status bar at top
         self.create_status_bar(main_container)
-        
+
         # Controls section
         self.create_controls(main_container)
-        
+
         # Action buttons
         self.create_action_buttons(main_container)
-        
+
         # Footer
         self.create_footer(main_container)
     
@@ -1023,27 +1023,27 @@ class AntarcticGUI(ctk.CTk):
             parent,
             fg_color=COLORS['bg_card'],
             corner_radius=12,
-            height=36,
+            height=40,
             border_width=1,
             border_color=COLORS['border']
         )
-        status_frame.pack(fill="x", padx=10, pady=(10, 6))
+        status_frame.pack(fill="x", padx=12, pady=(12, 8))
         status_frame.pack_propagate(False)
 
         # Connection status with glow
         self.conn_indicator = ctk.CTkLabel(
             status_frame,
             text="⬤ OFFLINE",
-            font=("Segoe UI", 9, "bold"),
+            font=("Segoe UI", 10, "bold"),
             text_color="#FF4757"
         )
-        self.conn_indicator.pack(side="left", padx=12)
+        self.conn_indicator.pack(side="left", padx=15)
 
         # Coordinates - center
         self.coords_label = ctk.CTkLabel(
             status_frame,
             text="―――",
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 10),
             text_color=COLORS['text_dim']
         )
         self.coords_label.pack(side="left", expand=True)
@@ -1052,10 +1052,10 @@ class AntarcticGUI(ctk.CTk):
         self.stats_label = ctk.CTkLabel(
             status_frame,
             text="0",
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 12, "bold"),
             text_color=COLORS['accent_cyan']
         )
-        self.stats_label.pack(side="right", padx=12)
+        self.stats_label.pack(side="right", padx=15)
         
     def create_controls(self, parent):
         """Frutiger Aero controls - compact sliders and settings"""
@@ -1063,14 +1063,14 @@ class AntarcticGUI(ctk.CTk):
             parent,
             fg_color="transparent"
         )
-        controls_frame.pack(fill="both", expand=True, padx=10, pady=6)
-        
+        controls_frame.pack(fill="both", expand=True, padx=12, pady=0)
+
         # Sliders section
         self.create_compact_sliders(controls_frame)
-        
+
         # Quick settings row
         self.create_quick_settings(controls_frame)
-        
+
         # Profile management
         self.create_profile_section(controls_frame)
     
@@ -1080,11 +1080,11 @@ class AntarcticGUI(ctk.CTk):
             parent,
             fg_color=COLORS['bg_card'],
             corner_radius=12,
-            height=38,
+            height=44,
             border_width=1,
             border_color=COLORS['border']
         )
-        profile_frame.pack(fill="x", pady=(5, 0))
+        profile_frame.pack(fill="x", pady=(8, 0))
         profile_frame.pack_propagate(False)
 
         # Profile dropdown
@@ -1093,8 +1093,8 @@ class AntarcticGUI(ctk.CTk):
             profile_frame,
             variable=self.profile_var,
             values=["Profile"] + self.profile_manager.get_profile_names(),
-            width=140,
-            height=28,
+            width=145,
+            height=32,
             corner_radius=8,
             fg_color=COLORS['bg_primary'],
             button_color=COLORS['accent_blue'],
@@ -1102,29 +1102,29 @@ class AntarcticGUI(ctk.CTk):
             dropdown_fg_color=COLORS['bg_card'],
             dropdown_hover_color=COLORS['accent_blue'],
             text_color=COLORS['text_primary'],
-            font=("Segoe UI", 9)
+            font=("Segoe UI", 10)
         )
-        self.profile_menu.pack(side="left", padx=8, pady=5)
+        self.profile_menu.pack(side="left", padx=10, pady=6)
 
         # Mini buttons
         btn_frame = ctk.CTkFrame(profile_frame, fg_color="transparent")
-        btn_frame.pack(side="right", padx=8)
-        
+        btn_frame.pack(side="right", padx=10)
+
         for text, cmd, color in [("Load", self.load_selected_profile, COLORS['accent_blue']),
                                   ("Save", self.save_profile, COLORS['accent_green']),
-                                  ("Del", self.delete_profile, "#FF4757")]:
+                                  ("Del", self.delete_profile, COLORS['accent_red'])]:
             btn = ctk.CTkButton(
                 btn_frame,
                 text=text,
-                width=50,
-                height=26,
-                corner_radius=6,
+                width=55,
+                height=30,
+                corner_radius=8,
                 fg_color=color,
                 hover_color=color,
-                font=("Segoe UI", 9, "bold"),
+                font=("Segoe UI", 10, "bold"),
                 command=cmd
             )
-            btn.pack(side="left", padx=2)
+            btn.pack(side="left", padx=3)
 
     def create_compact_sliders(self, parent):
         """Compact Frutiger Aero sliders"""
@@ -1135,7 +1135,7 @@ class AntarcticGUI(ctk.CTk):
             border_width=1,
             border_color=COLORS['border']
         )
-        sliders_frame.pack(fill="x", pady=(0, 5))
+        sliders_frame.pack(fill="x", pady=(0, 8))
 
         self.clicks_slider, self.clicks_label = self.create_aero_slider(
             sliders_frame, "Clicks", 1, 100, 24,
@@ -1157,34 +1157,34 @@ class AntarcticGUI(ctk.CTk):
     def create_aero_slider(self, parent, label, from_, to, initial, command):
         """Frutiger Aero styled compact slider"""
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.pack(fill="x", pady=2, padx=8)
-        
+        frame.pack(fill="x", pady=4, padx=12)
+
         # Label row
         label_frame = ctk.CTkFrame(frame, fg_color="transparent")
-        label_frame.pack(fill="x")
-        
+        label_frame.pack(fill="x", pady=(0, 4))
+
         ctk.CTkLabel(
             label_frame,
             text=label,
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 10),
             text_color=COLORS['text_secondary']
         ).pack(side="left")
-        
+
         value_label = ctk.CTkLabel(
             label_frame,
             text=str(initial),
-            font=("Segoe UI", 10, "bold"),
+            font=("Segoe UI", 11, "bold"),
             text_color=COLORS['accent_cyan']
         )
         value_label.pack(side="right")
-        
+
         # Slider with glow effect
         slider = ctk.CTkSlider(
             frame,
             from_=from_,
             to=to,
             number_of_steps=(to - from_) * (100 if from_ < 1 else 1),
-            height=14,
+            height=16,
             button_color=COLORS['accent_cyan'],
             button_hover_color=COLORS['glow'],
             progress_color=COLORS['accent_blue'],
@@ -1192,7 +1192,7 @@ class AntarcticGUI(ctk.CTk):
             command=lambda v: self.update_aero_slider(value_label, v, command, from_ < 1)
         )
         slider.set(initial)
-        slider.pack(fill="x", pady=(2, 0))
+        slider.pack(fill="x", pady=(0, 0))
         return slider, value_label
     
     def update_aero_slider(self, label, value, command, is_decimal):
@@ -1215,112 +1215,114 @@ class AntarcticGUI(ctk.CTk):
             border_width=1,
             border_color=COLORS['border']
         )
-        settings_frame.pack(fill="x", pady=(0, 5))
-        
+        settings_frame.pack(fill="x", pady=(0, 8))
+
         # Type and Button in one row
         row = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        row.pack(fill="x", padx=8, pady=6)
-        
+        row.pack(fill="x", padx=12, pady=(10, 8))
+
         # Click type
         type_frame = ctk.CTkFrame(row, fg_color="transparent")
-        type_frame.pack(side="left", fill="x", expand=True, padx=(0, 4))
-        
+        type_frame.pack(side="left", fill="x", expand=True, padx=(0, 6))
+
         ctk.CTkLabel(
             type_frame,
             text="Type",
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 10),
             text_color=COLORS['text_secondary']
-        ).pack(anchor="w")
-        
+        ).pack(anchor="w", pady=(0, 4))
+
         self.type_selector = ctk.CTkSegmentedButton(
             type_frame,
             values=["Single", "Double", "Triple"],
             command=lambda v: setattr(self.clicker.config, 'click_type', v.lower()),
-            font=("Segoe UI", 9, "bold"),
-            corner_radius=6,
+            font=("Segoe UI", 10, "bold"),
+            corner_radius=8,
             fg_color=COLORS['bg_primary'],
             selected_color=COLORS['accent_blue'],
             selected_hover_color=COLORS['accent_cyan'],
             unselected_color=COLORS['bg_primary'],
-            unselected_hover_color=COLORS['border']
+            unselected_hover_color=COLORS['border'],
+            height=32
         )
-        self.type_selector.pack(fill="x", pady=(2, 0))
+        self.type_selector.pack(fill="x")
         self.type_selector.set("Single")
-        
+
         # Mouse button
         button_frame = ctk.CTkFrame(row, fg_color="transparent")
-        button_frame.pack(side="right", fill="x", expand=True, padx=(4, 0))
-        
+        button_frame.pack(side="right", fill="x", expand=True, padx=(6, 0))
+
         ctk.CTkLabel(
             button_frame,
             text="Button",
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 10),
             text_color=COLORS['text_secondary']
-        ).pack(anchor="w")
-        
+        ).pack(anchor="w", pady=(0, 4))
+
         self.button_selector = ctk.CTkSegmentedButton(
             button_frame,
             values=["Left", "Right", "Mid"],
             command=lambda v: setattr(self.clicker.config, 'mouse_button', {'Left': 'left', 'Right': 'right', 'Mid': 'middle'}[v]),
-            font=("Segoe UI", 9, "bold"),
-            corner_radius=6,
+            font=("Segoe UI", 10, "bold"),
+            corner_radius=8,
             fg_color=COLORS['bg_primary'],
             selected_color=COLORS['accent_blue'],
             selected_hover_color=COLORS['accent_cyan'],
             unselected_color=COLORS['bg_primary'],
-            unselected_hover_color=COLORS['border']
+            unselected_hover_color=COLORS['border'],
+            height=32
         )
-        self.button_selector.pack(fill="x", pady=(2, 0))
+        self.button_selector.pack(fill="x")
         self.button_selector.set("Left")
-        
+
         # Options row
         options_row = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        options_row.pack(fill="x", padx=8, pady=(0, 6))
-        
+        options_row.pack(fill="x", padx=12, pady=(0, 10))
+
         self.humanize_checkbox = ctk.CTkCheckBox(
             options_row,
             text="Humanize",
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 10),
             command=self.toggle_humanization,
-            checkbox_width=16,
-            checkbox_height=16,
-            corner_radius=4,
+            checkbox_width=18,
+            checkbox_height=18,
+            corner_radius=5,
             text_color=COLORS['text_secondary'],
             fg_color=COLORS['accent_blue'],
             hover_color=COLORS['accent_cyan']
         )
-        self.humanize_checkbox.pack(side="left")
-        
+        self.humanize_checkbox.pack(side="left", padx=(0, 8))
+
         self.advanced_checkbox = ctk.CTkCheckBox(
             options_row,
             text="Burst Var",
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 10),
             command=self.toggle_advanced_timing,
-            checkbox_width=16,
-            checkbox_height=16,
-            corner_radius=4,
+            checkbox_width=18,
+            checkbox_height=18,
+            corner_radius=5,
             text_color=COLORS['text_secondary'],
             fg_color=COLORS['accent_green'],
             hover_color=COLORS['accent_green']
         )
-        self.advanced_checkbox.pack(side="right")
+        self.advanced_checkbox.pack(side="right", padx=(8, 0))
 
     def create_action_buttons(self, parent):
         """Frutiger Aero action button - single auto-burst button"""
         buttons_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        buttons_frame.pack(fill="x", padx=10, pady=(0, 6))
-        
+        buttons_frame.pack(fill="x", padx=12, pady=(0, 8))
+
         # Single auto-burst button
         self.autoburst_button = ctk.CTkButton(
             buttons_frame,
             text="AUTO-BURST",
-            height=44,
+            height=48,
             corner_radius=12,
             fg_color=COLORS['bg_card'],
             hover_color=COLORS['accent_blue'],
             border_width=2,
             border_color=COLORS['border'],
-            font=("Segoe UI", 13, "bold"),
+            font=("Segoe UI", 14, "bold"),
             text_color=COLORS['text_primary'],
             command=self.toggle_auto_burst
         )
@@ -1328,16 +1330,16 @@ class AntarcticGUI(ctk.CTk):
 
     def create_footer(self, parent):
         """Minimalist Frutiger Aero footer"""
-        footer = ctk.CTkFrame(parent, fg_color="transparent", height=32)
-        footer.pack(fill="x", padx=10, pady=(0, 6))
+        footer = ctk.CTkFrame(parent, fg_color="transparent", height=36)
+        footer.pack(fill="x", padx=12, pady=(0, 8))
         footer.pack_propagate(False)
-        
+
         ctk.CTkLabel(
             footer,
             text="F2: Burst  •  F3: Capture  •  F5: Auto",
             font=("Segoe UI", 10),
             text_color=COLORS['text_secondary']
-        ).pack(side="bottom")
+        ).pack(side="bottom", pady=4)
 
     def toggle_humanization(self):
         self.clicker.config.humanize_enabled = bool(self.humanize_checkbox.get())
