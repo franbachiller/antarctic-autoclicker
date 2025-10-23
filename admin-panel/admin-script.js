@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://antarctic-autoclicker-g3ofvr81i-frans-projects-593301de.vercel.app';
+const API_BASE_URL = '';
 let adminKey = localStorage.getItem('admin_key') || '';
 let allLicenses = [];
 let generatedLicenses = [];
