@@ -21,9 +21,20 @@ export default async function handler(req, res) {
   const adminKey = req.headers['x-admin-key'] || req.headers['X-Admin-Key'] || req.headers['admin-key'];
   const expectedKey = process.env.ADMIN_KEY || process.env.VITE_ADMIN_KEY || process.env.NEXT_PUBLIC_ADMIN_KEY;
 
+  console.log('=== AUTH DEBUG ===');
+  console.log('All headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Admin key received:', adminKey ? `"${adminKey}"` : 'null');
+  console.log('Expected key:', expectedKey ? `"${expectedKey}"` : 'null');
+  console.log('Key lengths - received:', adminKey ? adminKey.length : 0, 'expected:', expectedKey ? expectedKey.length : 0);
+  console.log('All env vars with ADMIN:', Object.keys(process.env).filter(k => k.includes('ADMIN')));
+  console.log('All env vars with SUPABASE:', Object.keys(process.env).filter(k => k.includes('SUPABASE')));
+
   if (!adminKey || adminKey.trim() !== expectedKey) {
+    console.log('AUTH FAILED - returning 401');
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  console.log('AUTH SUCCESS - proceeding');
 
   try {
     const { data, error } = await supabase
