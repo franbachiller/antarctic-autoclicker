@@ -166,14 +166,52 @@ class ClickConfig:
         self.event_sequence: ClickEventSequence | None = None
         self.delay_pattern: DelayPatternEngine | None = None
 
+        # New advanced timing systems
+        self.markov_chain_enabled = False
+        self.gaussian_delay_enabled = False
+        self.acceleration_enabled = False
+
+        # Markov Chain parameters
+        self.markov_fast_multiplier = 0.5
+        self.markov_medium_multiplier = 1.0
+        self.markov_slow_multiplier = 1.8
+
+        # Gaussian delay parameters
+        self.gaussian_mean_ms = 10.0
+        self.gaussian_std_dev_ms = 3.0
+        self.gaussian_min_delay_ms = 1.0
+        self.gaussian_use_absolute = False
+
+        # Acceleration profile parameters
+        self.accel_curve_type = 'linear'  # 'linear', 'exponential', 's_curve', 'custom'
+        self.accel_start_multiplier = 1.0
+        self.accel_end_multiplier = 0.5
+        self.accel_duration_clicks = 50
+        self.accel_duration_type = 'clicks'  # 'clicks' or 'time'
+
     def to_dict(self):
-        return {k: v for k, v in self.__dict__.items()}
+        data = {}
+        for k, v in self.__dict__.items():
+            # Skip None values for advanced profiles
+            if v is None:
+                continue
+            # Handle special objects
+            if hasattr(v, 'to_dict'):
+                data[k] = v.to_dict()
+            else:
+                data[k] = v
+        return data
 
     def from_dict(self, data):
         for key, value in data.items():
             if hasattr(self, key):
                 # Type conversion for boolean fields
-                if key in ['advanced_timing_enabled', 'humanize_enabled', 'humanize_advanced', 'ultra_mode', 'auto_burst_enabled']:
+                boolean_fields = [
+                    'advanced_timing_enabled', 'humanize_enabled', 'humanize_advanced',
+                    'ultra_mode', 'auto_burst_enabled', 'markov_chain_enabled',
+                    'gaussian_delay_enabled', 'acceleration_enabled', 'gaussian_use_absolute'
+                ]
+                if key in boolean_fields:
                     value = bool(value)
                 setattr(self, key, value)
 
@@ -270,6 +308,311 @@ class DelayPatternEngine:
         for key, value in data.items():
             if hasattr(self, key):
                 setattr(self, key, value)
+
+class MarkovChainTiming:
+    """Markov Chain-based timing system with state transitions"""
+    def __init__(self):
+        # Define speed states
+        self.states = ['fast', 'medium', 'slow']
+        self.current_state = 'medium'
+
+        # Transition probability matrix
+        # Format: {current_state: {next_state: probability}}
+        self.transition_matrix = {
+            'fast': {'fast': 0.3, 'medium': 0.5, 'slow': 0.2},
+            'medium': {'fast': 0.3, 'medium': 0.4, 'slow': 0.3},
+            'slow': {'fast': 0.2, 'medium': 0.5, 'slow': 0.3}
+        }
+
+        # Delay multipliers for each state (relative to base delay)
+        self.state_multipliers = {
+            'fast': 0.5,      # 50% of base delay
+            'medium': 1.0,    # 100% of base delay
+            'slow': 1.8       # 180% of base delay
+        }
+
+        # Configurable parameters
+        self.enabled = False
+        self.use_custom_multipliers = False
+        self.custom_fast_multiplier = 0.5
+        self.custom_medium_multiplier = 1.0
+        self.custom_slow_multiplier = 1.8
+
+    def get_next_state(self):
+        """Transition to next state based on probability matrix"""
+        if self.current_state not in self.transition_matrix:
+            self.current_state = 'medium'
+
+        transitions = self.transition_matrix[self.current_state]
+        states = list(transitions.keys())
+        probabilities = list(transitions.values())
+
+        # Normalize probabilities to ensure they sum to 1.0
+        total = sum(probabilities)
+        if total > 0:
+            probabilities = [p / total for p in probabilities]
+        else:
+            probabilities = [1.0 / len(states)] * len(states)
+
+        # Choose next state based on probabilities
+        self.current_state = random.choices(states, weights=probabilities, k=1)[0]
+        return self.current_state
+
+    def get_delay_multiplier(self):
+        """Get the delay multiplier for current state"""
+        if self.use_custom_multipliers:
+            multipliers = {
+                'fast': self.custom_fast_multiplier,
+                'medium': self.custom_medium_multiplier,
+                'slow': self.custom_slow_multiplier
+            }
+            return multipliers.get(self.current_state, 1.0)
+        else:
+            return self.state_multipliers.get(self.current_state, 1.0)
+
+    def apply_to_delay(self, base_delay):
+        """Apply Markov chain timing to base delay"""
+        if not self.enabled:
+            return base_delay
+
+        # Transition to next state
+        self.get_next_state()
+
+        # Apply state multiplier
+        multiplier = self.get_delay_multiplier()
+        return base_delay * multiplier
+
+    def set_transition_probability(self, from_state, to_state, probability):
+        """Set custom transition probability"""
+        if from_state in self.transition_matrix:
+            if to_state in self.transition_matrix[from_state]:
+                self.transition_matrix[from_state][to_state] = probability
+
+    def reset_state(self):
+        """Reset to medium state"""
+        self.current_state = 'medium'
+
+    def to_dict(self):
+        return {
+            'enabled': self.enabled,
+            'current_state': self.current_state,
+            'transition_matrix': self.transition_matrix,
+            'state_multipliers': self.state_multipliers,
+            'use_custom_multipliers': self.use_custom_multipliers,
+            'custom_fast_multiplier': self.custom_fast_multiplier,
+            'custom_medium_multiplier': self.custom_medium_multiplier,
+            'custom_slow_multiplier': self.custom_slow_multiplier
+        }
+
+    def from_dict(self, data):
+        for key, value in data.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+class GaussianDelayEngine:
+    """Gaussian (Normal) distribution-based delay system"""
+    def __init__(self):
+        self.enabled = False
+        self.mean_ms = 10.0          # Mean delay in milliseconds
+        self.std_dev_ms = 3.0        # Standard deviation in milliseconds
+        self.min_delay_ms = 1.0      # Minimum allowed delay
+        self.max_delay_ms = 100.0    # Maximum allowed delay (cap outliers)
+        self.use_absolute = False    # If True, use absolute values; if False, use as multiplier
+
+    def get_gaussian_delay(self, base_delay=None):
+        """Generate delay using Gaussian distribution"""
+        if not self.enabled:
+            return base_delay if base_delay is not None else 0.01
+
+        if self.use_absolute:
+            # Use absolute Gaussian values (ignore base_delay)
+            delay_ms = random.gauss(self.mean_ms, self.std_dev_ms)
+        else:
+            # Use Gaussian as multiplier on base_delay
+            if base_delay is None:
+                base_delay = 0.01  # Default 10ms
+
+            # Generate multiplier with mean=1.0 and configurable std dev
+            multiplier = random.gauss(1.0, self.std_dev_ms / self.mean_ms)
+            delay_ms = (base_delay * 1000.0) * multiplier
+
+        # Clamp to min/max bounds
+        delay_ms = max(self.min_delay_ms, min(self.max_delay_ms, delay_ms))
+
+        # Convert to seconds
+        return delay_ms / 1000.0
+
+    def apply_to_delay(self, base_delay):
+        """Apply Gaussian distribution to base delay"""
+        if not self.enabled:
+            return base_delay
+
+        return self.get_gaussian_delay(base_delay)
+
+    def to_dict(self):
+        return {
+            'enabled': self.enabled,
+            'mean_ms': self.mean_ms,
+            'std_dev_ms': self.std_dev_ms,
+            'min_delay_ms': self.min_delay_ms,
+            'max_delay_ms': self.max_delay_ms,
+            'use_absolute': self.use_absolute
+        }
+
+    def from_dict(self, data):
+        for key, value in data.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+class AccelerationProfile:
+    """Acceleration/Deceleration profile system for smooth speed transitions"""
+    def __init__(self):
+        self.enabled = False
+        self.curve_type = 'linear'  # 'linear', 'exponential', 's_curve', 'custom'
+
+        # Speed parameters (as multipliers of base delay)
+        self.start_speed_multiplier = 1.0   # Starting speed (1.0 = normal)
+        self.end_speed_multiplier = 0.5     # Ending speed (0.5 = 2x faster)
+
+        # Duration parameters
+        self.duration_type = 'clicks'  # 'clicks' or 'time'
+        self.duration_clicks = 50      # Number of clicks for transition
+        self.duration_seconds = 5.0    # Time in seconds for transition
+
+        # Current state
+        self.current_click = 0
+        self.start_time = None
+        self.is_accelerating = True  # True = speed up, False = slow down
+
+        # Custom curve points (for custom curve type)
+        # List of (progress, multiplier) tuples where progress is 0.0 to 1.0
+        self.custom_curve_points = [
+            (0.0, 1.0),
+            (0.5, 0.75),
+            (1.0, 0.5)
+        ]
+
+        # Exponential curve parameters
+        self.exponential_factor = 2.0  # Higher = more aggressive curve
+
+        # S-curve (sigmoid) parameters
+        self.sigmoid_steepness = 10.0  # Higher = steeper transition
+
+    def reset(self):
+        """Reset acceleration state"""
+        self.current_click = 0
+        self.start_time = time.time()
+
+    def get_progress(self):
+        """Calculate current progress (0.0 to 1.0)"""
+        if self.duration_type == 'clicks':
+            if self.duration_clicks <= 0:
+                return 1.0
+            progress = self.current_click / self.duration_clicks
+        else:  # time-based
+            if self.start_time is None:
+                self.start_time = time.time()
+            elapsed = time.time() - self.start_time
+            if self.duration_seconds <= 0:
+                return 1.0
+            progress = elapsed / self.duration_seconds
+
+        # Clamp to [0.0, 1.0]
+        return max(0.0, min(1.0, progress))
+
+    def calculate_multiplier(self, progress):
+        """Calculate speed multiplier based on curve type and progress"""
+        start = self.start_speed_multiplier
+        end = self.end_speed_multiplier
+
+        if self.curve_type == 'linear':
+            # Linear interpolation
+            multiplier = start + (end - start) * progress
+
+        elif self.curve_type == 'exponential':
+            # Exponential curve
+            # Use exponential function for smooth acceleration
+            exp_progress = (math.exp(self.exponential_factor * progress) - 1) / (math.exp(self.exponential_factor) - 1)
+            multiplier = start + (end - start) * exp_progress
+
+        elif self.curve_type == 's_curve':
+            # S-curve (sigmoid function)
+            # Maps 0-1 input to smooth S-shaped curve
+            x = (progress - 0.5) * self.sigmoid_steepness
+            sigmoid = 1 / (1 + math.exp(-x))
+            multiplier = start + (end - start) * sigmoid
+
+        elif self.curve_type == 'custom':
+            # Custom curve using interpolation between points
+            multiplier = self._interpolate_custom_curve(progress)
+
+        else:
+            multiplier = start
+
+        return multiplier
+
+    def _interpolate_custom_curve(self, progress):
+        """Interpolate multiplier from custom curve points"""
+        if not self.custom_curve_points:
+            return self.start_speed_multiplier
+
+        # Sort points by progress
+        points = sorted(self.custom_curve_points, key=lambda p: p[0])
+
+        # Find surrounding points
+        for i in range(len(points) - 1):
+            p1, m1 = points[i]
+            p2, m2 = points[i + 1]
+
+            if p1 <= progress <= p2:
+                # Linear interpolation between points
+                if p2 - p1 == 0:
+                    return m1
+                t = (progress - p1) / (p2 - p1)
+                return m1 + (m2 - m1) * t
+
+        # If progress is beyond last point, return last multiplier
+        return points[-1][1]
+
+    def apply_to_delay(self, base_delay):
+        """Apply acceleration profile to base delay"""
+        if not self.enabled:
+            return base_delay
+
+        # Get current progress
+        progress = self.get_progress()
+
+        # Calculate multiplier
+        multiplier = self.calculate_multiplier(progress)
+
+        # Increment click counter
+        self.current_click += 1
+
+        # Apply multiplier to delay
+        return base_delay * multiplier
+
+    def to_dict(self):
+        return {
+            'enabled': self.enabled,
+            'curve_type': self.curve_type,
+            'start_speed_multiplier': self.start_speed_multiplier,
+            'end_speed_multiplier': self.end_speed_multiplier,
+            'duration_type': self.duration_type,
+            'duration_clicks': self.duration_clicks,
+            'duration_seconds': self.duration_seconds,
+            'current_click': self.current_click,
+            'is_accelerating': self.is_accelerating,
+            'custom_curve_points': self.custom_curve_points,
+            'exponential_factor': self.exponential_factor,
+            'sigmoid_steepness': self.sigmoid_steepness
+        }
+
+    def from_dict(self, data):
+        for key, value in data.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+        # Reset start_time as it shouldn't be serialized
+        self.start_time = None
 
 class ThreadingOptimizer:
     def __init__(self):
@@ -398,10 +741,21 @@ class AutoClicker:
         self.last_burst_clicks = 0
         self.circular_jitter_angle = 0
 
+        # Timing monitoring
+        self.last_delay_ms = 0.0
+        self.last_markov_state = "medium"
+        self.last_gaussian_value = 0.0
+        self.last_accel_progress = 0.0
+
         # Advanced timing system components
         self.threading_optimizer = ThreadingOptimizer()
         self.delay_engine = DelayPatternEngine()
         self.event_sequence = ClickEventSequence()
+
+        # New advanced timing engines
+        self.markov_chain = MarkovChainTiming()
+        self.gaussian_delay = GaussianDelayEngine()
+        self.acceleration_profile = AccelerationProfile()
 
         # Predefined advanced profiles
         self.advanced_profiles = self._create_advanced_profiles()
@@ -459,11 +813,12 @@ class AutoClicker:
     def get_timing_delay(self):
         # Ultra mode: no delay
         if self.config.ultra_mode:
+            self.last_delay_ms = 0.0
             return 0
-        
+
         # Start with the interval slider value (in milliseconds, convert to seconds)
         base_delay = self.config.interval / 1000.0
-        
+
         # Apply humanization if enabled
         if self.config.humanize_enabled:
             if self.config.timing_profile == 'human_slow':
@@ -475,23 +830,75 @@ class AutoClicker:
             elif self.config.timing_profile == 'random':
                 # Random multiplier
                 base_delay *= random.uniform(0.5, 2.0)
-            
+
             # Apply time jitter if configured
             if self.config.time_jitter_ms > 0:
                 jitter = random.uniform(-self.config.time_jitter_ms, self.config.time_jitter_ms) / 1000.0
                 base_delay += jitter
-        
+
         # Apply advanced timing modifications if enabled
         if self.config.advanced_timing_enabled and self.config.advanced_profile:
             profile = self.config.advanced_profile
-            
+
             # Apply micro-jitter for race conditions (additive)
             if profile.jitter_range:
                 jitter = random.uniform(profile.jitter_range[0], profile.jitter_range[1])
                 base_delay += jitter
-        
-        # Ensure minimum delay
-        return max(0.001, base_delay)
+
+        # === NEW ADVANCED TIMING SYSTEMS ===
+
+        # 1. Apply Markov Chain Timing (state-based transitions)
+        if self.config.markov_chain_enabled:
+            # Sync config parameters to engine
+            self.markov_chain.enabled = True
+            self.markov_chain.use_custom_multipliers = True
+            self.markov_chain.custom_fast_multiplier = self.config.markov_fast_multiplier
+            self.markov_chain.custom_medium_multiplier = self.config.markov_medium_multiplier
+            self.markov_chain.custom_slow_multiplier = self.config.markov_slow_multiplier
+
+            base_delay = self.markov_chain.apply_to_delay(base_delay)
+            self.last_markov_state = self.markov_chain.current_state
+        else:
+            self.markov_chain.enabled = False
+            self.last_markov_state = "off"
+
+        # 2. Apply Gaussian Distribution Delays
+        if self.config.gaussian_delay_enabled:
+            # Sync config parameters to engine
+            self.gaussian_delay.enabled = True
+            self.gaussian_delay.mean_ms = self.config.gaussian_mean_ms
+            self.gaussian_delay.std_dev_ms = self.config.gaussian_std_dev_ms
+            self.gaussian_delay.min_delay_ms = self.config.gaussian_min_delay_ms
+            self.gaussian_delay.use_absolute = self.config.gaussian_use_absolute
+
+            before_gaussian = base_delay
+            base_delay = self.gaussian_delay.apply_to_delay(base_delay)
+            self.last_gaussian_value = base_delay - before_gaussian
+        else:
+            self.gaussian_delay.enabled = False
+            self.last_gaussian_value = 0.0
+
+        # 3. Apply Acceleration/Deceleration Profile
+        if self.config.acceleration_enabled:
+            # Sync config parameters to engine
+            self.acceleration_profile.enabled = True
+            self.acceleration_profile.curve_type = self.config.accel_curve_type
+            self.acceleration_profile.start_speed_multiplier = self.config.accel_start_multiplier
+            self.acceleration_profile.end_speed_multiplier = self.config.accel_end_multiplier
+            self.acceleration_profile.duration_clicks = self.config.accel_duration_clicks
+            self.acceleration_profile.duration_type = self.config.accel_duration_type
+
+            base_delay = self.acceleration_profile.apply_to_delay(base_delay)
+            self.last_accel_progress = self.acceleration_profile.get_progress()
+        else:
+            self.acceleration_profile.enabled = False
+            self.last_accel_progress = 0.0
+
+        # Ensure minimum delay and store for monitoring
+        final_delay = max(0.001, base_delay)
+        self.last_delay_ms = final_delay * 1000.0
+
+        return final_delay
 
     def get_button_messages(self, button):
         buttons = {
@@ -600,6 +1007,10 @@ class AutoClicker:
             self.active_bursts += 1
             if self.active_bursts == 1 and self.gui_callback:
                 self.gui_callback('burst_started')
+
+        # Reset acceleration profile for new burst
+        if self.config.acceleration_enabled:
+            self.acceleration_profile.reset()
 
         # Apply advanced threading optimizations
         if self.config.advanced_timing_enabled and self.config.advanced_profile:
@@ -749,6 +1160,245 @@ class AutoClicker:
 
     def stop(self):
         self.running = False
+
+class AdvancedTimingDialog(ctk.CTkToplevel):
+    """Dialog for configuring advanced timing parameters"""
+    def __init__(self, parent, config):
+        super().__init__(parent)
+        self.title("Advanced Timing Configuration")
+        self.geometry("500x600")
+        self.resizable(False, False)
+        self.config = config
+
+        # Configure window
+        self.configure(fg_color=COLORS['bg_primary'])
+
+        # Center window
+        self.update_idletasks()
+        x = (self.winfo_screenwidth() // 2) - (250)
+        y = (self.winfo_screenheight() // 2) - (300)
+        self.geometry(f'+{x}+{y}')
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        # Main container
+        main_frame = ctk.CTkScrollableFrame(
+            self,
+            fg_color=COLORS['bg_secondary'],
+            corner_radius=12,
+            border_width=2,
+            border_color=COLORS['accent_blue']
+        )
+        main_frame.pack(fill="both", expand=True, padx=12, pady=12)
+
+        # === MARKOV CHAIN SECTION ===
+        self.create_section_header(main_frame, "🔗 Markov Chain Timing")
+
+        markov_frame = self.create_section_frame(main_frame)
+
+        self.create_slider_with_label(
+            markov_frame, "Fast Speed Multiplier", 0.1, 2.0,
+            self.config.markov_fast_multiplier,
+            lambda v: setattr(self.config, 'markov_fast_multiplier', v)
+        )
+
+        self.create_slider_with_label(
+            markov_frame, "Medium Speed Multiplier", 0.1, 2.0,
+            self.config.markov_medium_multiplier,
+            lambda v: setattr(self.config, 'markov_medium_multiplier', v)
+        )
+
+        self.create_slider_with_label(
+            markov_frame, "Slow Speed Multiplier", 0.1, 3.0,
+            self.config.markov_slow_multiplier,
+            lambda v: setattr(self.config, 'markov_slow_multiplier', v)
+        )
+
+        # === GAUSSIAN DELAY SECTION ===
+        self.create_section_header(main_frame, "📊 Gaussian Distribution")
+
+        gaussian_frame = self.create_section_frame(main_frame)
+
+        self.create_slider_with_label(
+            gaussian_frame, "Mean Delay (ms)", 1.0, 100.0,
+            self.config.gaussian_mean_ms,
+            lambda v: setattr(self.config, 'gaussian_mean_ms', v)
+        )
+
+        self.create_slider_with_label(
+            gaussian_frame, "Std Deviation (ms)", 0.5, 20.0,
+            self.config.gaussian_std_dev_ms,
+            lambda v: setattr(self.config, 'gaussian_std_dev_ms', v)
+        )
+
+        self.create_slider_with_label(
+            gaussian_frame, "Min Delay (ms)", 0.1, 10.0,
+            self.config.gaussian_min_delay_ms,
+            lambda v: setattr(self.config, 'gaussian_min_delay_ms', v)
+        )
+
+        # Gaussian mode toggle
+        mode_frame = ctk.CTkFrame(gaussian_frame, fg_color="transparent")
+        mode_frame.pack(fill="x", padx=10, pady=5)
+
+        self.gaussian_mode_var = ctk.StringVar(
+            value="Multiplier" if not self.config.gaussian_use_absolute else "Absolute"
+        )
+
+        ctk.CTkLabel(
+            mode_frame,
+            text="Mode:",
+            font=("Segoe UI", 10),
+            text_color=COLORS['text_secondary']
+        ).pack(side="left", padx=(0, 10))
+
+        mode_selector = ctk.CTkSegmentedButton(
+            mode_frame,
+            values=["Multiplier", "Absolute"],
+            variable=self.gaussian_mode_var,
+            command=self.on_gaussian_mode_change,
+            font=("Segoe UI", 9),
+            fg_color=COLORS['bg_primary'],
+            selected_color=COLORS['accent_blue'],
+            unselected_color=COLORS['bg_card']
+        )
+        mode_selector.pack(side="left", fill="x", expand=True)
+
+        # === ACCELERATION SECTION ===
+        self.create_section_header(main_frame, "⚡ Acceleration Profile")
+
+        accel_frame = self.create_section_frame(main_frame)
+
+        # Curve type selector
+        curve_frame = ctk.CTkFrame(accel_frame, fg_color="transparent")
+        curve_frame.pack(fill="x", padx=10, pady=5)
+
+        ctk.CTkLabel(
+            curve_frame,
+            text="Curve Type:",
+            font=("Segoe UI", 10),
+            text_color=COLORS['text_secondary']
+        ).pack(side="left", padx=(0, 10))
+
+        self.curve_type_var = ctk.StringVar(value=self.config.accel_curve_type.title())
+
+        curve_selector = ctk.CTkSegmentedButton(
+            curve_frame,
+            values=["Linear", "Exponential", "S_curve"],
+            variable=self.curve_type_var,
+            command=self.on_curve_type_change,
+            font=("Segoe UI", 8),
+            fg_color=COLORS['bg_primary'],
+            selected_color=COLORS['accent_green'],
+            unselected_color=COLORS['bg_card']
+        )
+        curve_selector.pack(side="left", fill="x", expand=True)
+
+        self.create_slider_with_label(
+            accel_frame, "Start Speed Multiplier", 0.1, 3.0,
+            self.config.accel_start_multiplier,
+            lambda v: setattr(self.config, 'accel_start_multiplier', v)
+        )
+
+        self.create_slider_with_label(
+            accel_frame, "End Speed Multiplier", 0.1, 3.0,
+            self.config.accel_end_multiplier,
+            lambda v: setattr(self.config, 'accel_end_multiplier', v)
+        )
+
+        self.create_slider_with_label(
+            accel_frame, "Duration (clicks)", 10, 200,
+            self.config.accel_duration_clicks,
+            lambda v: setattr(self.config, 'accel_duration_clicks', int(v))
+        )
+
+        # Close button
+        close_btn = ctk.CTkButton(
+            main_frame,
+            text="Close",
+            height=40,
+            corner_radius=10,
+            fg_color=COLORS['accent_blue'],
+            hover_color=COLORS['accent_cyan'],
+            font=("Segoe UI", 12, "bold"),
+            command=self.destroy
+        )
+        close_btn.pack(fill="x", padx=10, pady=(15, 10))
+
+    def create_section_header(self, parent, text):
+        """Create a section header"""
+        header = ctk.CTkLabel(
+            parent,
+            text=text,
+            font=("Segoe UI", 12, "bold"),
+            text_color=COLORS['accent_cyan']
+        )
+        header.pack(anchor="w", padx=10, pady=(10, 5))
+
+    def create_section_frame(self, parent):
+        """Create a frame for section content"""
+        frame = ctk.CTkFrame(
+            parent,
+            fg_color=COLORS['bg_card'],
+            corner_radius=8,
+            border_width=1,
+            border_color=COLORS['border']
+        )
+        frame.pack(fill="x", padx=5, pady=(0, 10))
+        return frame
+
+    def create_slider_with_label(self, parent, label_text, from_, to, default_value, command):
+        """Create a slider with label and value display"""
+        container = ctk.CTkFrame(parent, fg_color="transparent")
+        container.pack(fill="x", padx=10, pady=5)
+
+        # Label and value
+        label_frame = ctk.CTkFrame(container, fg_color="transparent")
+        label_frame.pack(fill="x")
+
+        ctk.CTkLabel(
+            label_frame,
+            text=label_text,
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_secondary']
+        ).pack(side="left")
+
+        value_label = ctk.CTkLabel(
+            label_frame,
+            text=f"{default_value:.2f}",
+            font=("Segoe UI", 9, "bold"),
+            text_color=COLORS['accent_cyan']
+        )
+        value_label.pack(side="right")
+
+        # Slider
+        slider = ctk.CTkSlider(
+            container,
+            from_=from_,
+            to=to,
+            number_of_steps=100,
+            fg_color=COLORS['bg_primary'],
+            progress_color=COLORS['accent_blue'],
+            button_color=COLORS['accent_cyan'],
+            button_hover_color=COLORS['glow'],
+            command=lambda v: self.on_slider_change(v, value_label, command)
+        )
+        slider.set(default_value)
+        slider.pack(fill="x", pady=(2, 0))
+
+    def on_slider_change(self, value, label, command):
+        """Handle slider value change"""
+        label.configure(text=f"{value:.2f}")
+        command(value)
+
+    def on_gaussian_mode_change(self, value):
+        """Handle Gaussian mode change"""
+        self.config.gaussian_use_absolute = (value == "Absolute")
+
+    def on_curve_type_change(self, value):
+        """Handle curve type change"""
+        self.config.accel_curve_type = value.lower()
 
 class ActivationWindow(ctk.CTk):
     def __init__(self):
@@ -938,7 +1588,7 @@ class AntarcticGUI(ctk.CTk):
     def __init__(self, key_manager):
         super().__init__()
         self.title("ANTARCTIC")
-        self.geometry("400x620")  # Ultra compact Frutiger Aero style
+        self.geometry("400x730")  # Increased height for advanced timing section with monitor
         self.resizable(False, False)
 
         # Set window icon
@@ -1073,7 +1723,115 @@ class AntarcticGUI(ctk.CTk):
 
         # Profile management
         self.create_profile_section(controls_frame)
-    
+
+        # Advanced timing controls
+        self.create_advanced_timing_section(controls_frame)
+
+    def create_advanced_timing_section(self, parent):
+        """Advanced timing controls - compact section"""
+        # Main container with fixed height
+        timing_frame = ctk.CTkFrame(
+            parent,
+            fg_color=COLORS['bg_card'],
+            corner_radius=12,
+            border_width=1,
+            border_color=COLORS['border'],
+            height=90
+        )
+        timing_frame.pack(fill="x", pady=(8, 0))
+        timing_frame.pack_propagate(False)
+
+        # Content container
+        content_frame = ctk.CTkFrame(timing_frame, fg_color="transparent")
+        content_frame.pack(fill="both", expand=True, padx=12, pady=8)
+
+        # Header row with label and settings button
+        header_row = ctk.CTkFrame(content_frame, fg_color="transparent")
+        header_row.pack(fill="x", pady=(0, 4))
+
+        ctk.CTkLabel(
+            header_row,
+            text="⚡ Advanced Timing",
+            font=("Segoe UI", 10, "bold"),
+            text_color=COLORS['accent_cyan']
+        ).pack(side="left")
+
+        # Settings button
+        settings_btn = ctk.CTkButton(
+            header_row,
+            text="⚙",
+            width=28,
+            height=22,
+            corner_radius=6,
+            fg_color=COLORS['bg_primary'],
+            hover_color=COLORS['accent_blue'],
+            font=("Segoe UI", 11),
+            command=self.open_advanced_timing_dialog
+        )
+        settings_btn.pack(side="right")
+
+        # Toggles row
+        toggles_row = ctk.CTkFrame(content_frame, fg_color="transparent")
+        toggles_row.pack(fill="x", pady=(0, 4))
+
+        # Markov Chain toggle
+        self.markov_checkbox = ctk.CTkCheckBox(
+            toggles_row,
+            text="Markov",
+            font=("Segoe UI", 9),
+            command=self.toggle_markov_chain,
+            checkbox_width=16,
+            checkbox_height=16,
+            corner_radius=4,
+            text_color=COLORS['text_primary'],
+            fg_color=COLORS['accent_blue'],
+            hover_color=COLORS['accent_cyan']
+        )
+        self.markov_checkbox.pack(side="left", padx=(0, 10))
+
+        # Gaussian toggle
+        self.gaussian_checkbox = ctk.CTkCheckBox(
+            toggles_row,
+            text="Gaussian",
+            font=("Segoe UI", 9),
+            command=self.toggle_gaussian,
+            checkbox_width=16,
+            checkbox_height=16,
+            corner_radius=4,
+            text_color=COLORS['text_primary'],
+            fg_color=COLORS['accent_green'],
+            hover_color=COLORS['accent_green']
+        )
+        self.gaussian_checkbox.pack(side="left", padx=(0, 10))
+
+        # Acceleration toggle
+        self.accel_checkbox = ctk.CTkCheckBox(
+            toggles_row,
+            text="Accel",
+            font=("Segoe UI", 9),
+            command=self.toggle_acceleration,
+            checkbox_width=16,
+            checkbox_height=16,
+            corner_radius=4,
+            text_color=COLORS['text_primary'],
+            fg_color=COLORS['glow'],
+            hover_color=COLORS['glow']
+        )
+        self.accel_checkbox.pack(side="left")
+
+        # Timing monitor (shows real-time values)
+        monitor_row = ctk.CTkFrame(content_frame, fg_color="transparent")
+        monitor_row.pack(fill="x")
+
+        self.timing_monitor_label = ctk.CTkLabel(
+            monitor_row,
+            text="Monitor: Ready",
+            font=("Consolas", 9),
+            text_color=COLORS['text_dim'],
+            anchor="w"
+        )
+        self.timing_monitor_label.pack(side="left", fill="x", expand=True)
+
     def create_profile_section(self, parent):
         """Compact profile management"""
         profile_frame = ctk.CTkFrame(
@@ -1379,7 +2137,26 @@ class AntarcticGUI(ctk.CTk):
 
     # update_burst_variations_ui method removed - no longer needed with simplified UI
 
+    def toggle_markov_chain(self):
+        """Toggle Markov Chain timing system"""
+        self.clicker.config.markov_chain_enabled = bool(self.markov_checkbox.get())
 
+    def toggle_gaussian(self):
+        """Toggle Gaussian delay system"""
+        self.clicker.config.gaussian_delay_enabled = bool(self.gaussian_checkbox.get())
+
+    def toggle_acceleration(self):
+        """Toggle acceleration profile system"""
+        self.clicker.config.acceleration_enabled = bool(self.accel_checkbox.get())
+        # Reset acceleration profile when enabled
+        if self.clicker.config.acceleration_enabled:
+            self.clicker.acceleration_profile.reset()
+
+    def open_advanced_timing_dialog(self):
+        """Open dialog for advanced timing configuration"""
+        dialog = AdvancedTimingDialog(self, self.clicker.config)
+        dialog.grab_set()  # Make dialog modal
+        self.wait_window(dialog)  # Wait for dialog to close
 
     def handle_callback(self, event):
         # Don't schedule callbacks if window is closing
@@ -1455,6 +2232,39 @@ class AntarcticGUI(ctk.CTk):
                 text=str(total_clicks),
                 text_color=COLORS['accent_cyan']
             )
+
+        # Update timing monitor
+        self.update_timing_monitor()
+
+    def update_timing_monitor(self):
+        """Update the timing monitor with real-time values"""
+        if self.clicker.active_bursts == 0:
+            self.timing_monitor_label.configure(text="Monitor: Ready")
+            return
+
+        # Build monitor string
+        parts = []
+
+        # Show current delay
+        parts.append(f"Delay:{self.clicker.last_delay_ms:.1f}ms")
+
+        # Show Markov state if enabled
+        if self.clicker.config.markov_chain_enabled:
+            state_colors = {'fast': '🟢', 'medium': '🟡', 'slow': '🔴'}
+            icon = state_colors.get(self.clicker.last_markov_state, '⚪')
+            parts.append(f"M:{icon}")
+
+        # Show Gaussian if enabled
+        if self.clicker.config.gaussian_delay_enabled:
+            parts.append(f"G:±{abs(self.clicker.last_gaussian_value*1000):.1f}")
+
+        # Show Acceleration progress if enabled
+        if self.clicker.config.acceleration_enabled:
+            progress_pct = int(self.clicker.last_accel_progress * 100)
+            parts.append(f"A:{progress_pct}%")
+
+        monitor_text = " | ".join(parts)
+        self.timing_monitor_label.configure(text=monitor_text)
         
     def sync_auto_burst_state(self):
         self.autoburst_button.configure(
@@ -1521,7 +2331,23 @@ class AntarcticGUI(ctk.CTk):
             self.humanize_checkbox.select()
         else:
             self.humanize_checkbox.deselect()
-            
+
+        # Sync new advanced timing checkboxes
+        if self.clicker.config.markov_chain_enabled:
+            self.markov_checkbox.select()
+        else:
+            self.markov_checkbox.deselect()
+
+        if self.clicker.config.gaussian_delay_enabled:
+            self.gaussian_checkbox.select()
+        else:
+            self.gaussian_checkbox.deselect()
+
+        if self.clicker.config.acceleration_enabled:
+            self.accel_checkbox.select()
+        else:
+            self.accel_checkbox.deselect()
+
         self.sync_auto_burst_state()
 
     def save_current_config_on_exit(self):
