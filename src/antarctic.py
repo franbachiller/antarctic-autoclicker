@@ -15,25 +15,26 @@ from PIL import Image
 from auth_client import AuthClient
 from security import SecurityGuard
 from latency_compensator import LatencyCompensator
+from updater import Updater, get_version_from_file
 
 # GUI Configuration - Frutiger Aero Style
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-# Frutiger Aero Color Palette - Enhanced Depth & Contrast
+# Dark Theme - Pure Black with Fire Red Accent
 COLORS = {
-    'bg_primary': '#090C14',      # Deep blue-black
-    'bg_secondary': '#0F1419',    # Lighter blue-black
-    'bg_card': '#161B26',         # Card background
-    'accent_blue': '#4A7BA7',     # Muted professional blue
-    'accent_cyan': '#6B9FCC',     # Soft blue (más brillante)
-    'accent_green': '#5A8AB0',    # Muted blue-green
-    'text_primary': '#E0EBF5',    # Soft blue-white (más brillante)
-    'text_secondary': '#7A92AB',  # Muted blue-gray
-    'text_dim': '#4E6278',        # Dim blue
-    'border': '#2D3F54',          # Subtle border (más visible)
-    'glow': '#6BA5D8',            # Soft glow effect
-    'accent_red': '#D85A5A',      # Muted red for delete (más visible)
+    'bg_primary': '#000000',      # Pure black
+    'bg_secondary': '#0A0A0A',    # Almost black
+    'bg_card': '#121212',         # Dark card background
+    'accent_blue': '#FF3030',     # Fire red (primary accent)
+    'accent_cyan': '#FF3030',     # Fire red (same as accent)
+    'accent_green': '#FF3030',    # Fire red (for consistency)
+    'text_primary': '#FFFFFF',    # Pure white text
+    'text_secondary': '#808080',  # Gray text
+    'text_dim': '#505050',        # Dim gray
+    'border': '#1A1A1A',          # Subtle dark border
+    'glow': '#FF3030',            # Fire red glow
+    'accent_red': '#FF0000',      # Bright red for delete
 }
 
 # Windows API handles
@@ -58,11 +59,11 @@ def get_app_data_dir():
         # Get user's AppData/Local folder
         appdata = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
         app_dir = os.path.join(appdata, '.antarctic')
-        
+
         # Create directory if it doesn't exist
         if not os.path.exists(app_dir):
             os.makedirs(app_dir)
-            
+
             # Set hidden attribute on Windows
             if sys.platform == 'win32':
                 try:
@@ -71,11 +72,49 @@ def get_app_data_dir():
                     ctypes.windll.kernel32.SetFileAttributesW(app_dir, FILE_ATTRIBUTE_HIDDEN)
                 except:
                     pass
-        
+
         return app_dir
     except:
         # Fallback to current directory if something fails
         return '.'
+
+class ToolTip:
+    """Simple tooltip for CTk widgets"""
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip_window = None
+
+        widget.bind("<Enter>", self.show_tooltip)
+        widget.bind("<Leave>", self.hide_tooltip)
+
+    def show_tooltip(self, event=None):
+        if self.tooltip_window or not self.text:
+            return
+
+        x = self.widget.winfo_rootx() + 20
+        y = self.widget.winfo_rooty() + 20
+
+        self.tooltip_window = tw = ctk.CTkToplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+
+        label = ctk.CTkLabel(
+            tw,
+            text=self.text,
+            fg_color=COLORS['bg_card'],
+            text_color=COLORS['text_primary'],
+            corner_radius=6,
+            font=("Segoe UI", 9),
+            padx=8,
+            pady=4
+        )
+        label.pack()
+
+    def hide_tooltip(self, event=None):
+        if self.tooltip_window:
+            self.tooltip_window.destroy()
+            self.tooltip_window = None
 
 # Windows Messages Constants
 WM_LBUTTONDOWN = 0x0201
@@ -1085,24 +1124,37 @@ class AutoClicker:
                 for i in range(clicks_to_send):
                     if not self.running:
                         break
-                    
-                    # Send click down
-                    user32.SendMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
-                    
-                    # Apply delay if not ultra mode
-                    if not ultra_mode:
-                        delay = self.get_timing_delay()
-                        if delay > 0:
-                            time.sleep(delay)
-                    
-                    # Send click up
-                    user32.SendMessageW(hwnd, self._msg_up, 0, self._lparam_up)
-                    
-                    # Update counters
-                    self.total_clicks_sent += 1
-                    self.current_burst_clicks += 1
+
+                    # Determine how many clicks to send based on click_type
+                    click_multiplier = 1
+                    if self.config.click_type == 'double':
+                        click_multiplier = 2
+                    elif self.config.click_type == 'triple':
+                        click_multiplier = 3
+
+                    # Send the click(s)
+                    for click_num in range(click_multiplier):
+                        # Send click down
+                        user32.SendMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
+
+                        # Apply delay if not ultra mode
+                        if not ultra_mode:
+                            delay = self.get_timing_delay()
+                            if delay > 0:
+                                time.sleep(delay)
+
+                        # Send click up
+                        user32.SendMessageW(hwnd, self._msg_up, 0, self._lparam_up)
+
+                        # Small delay between double/triple clicks
+                        if click_num < click_multiplier - 1:
+                            time.sleep(0.05)
+
+                    # Update counters (count as 1 action regardless of click_type)
+                    self.total_clicks_sent += click_multiplier
+                    self.current_burst_clicks += click_multiplier
                     click_count += 1
-                    
+
                     # Update stats periodically
                     if click_count % stats_update_interval == 0 and self.gui_callback:
                         self.gui_callback('stats_update')
@@ -1623,7 +1675,7 @@ class AntarcticGUI(ctk.CTk):
     def __init__(self, key_manager):
         super().__init__()
         self.title("ANTARCTIC")
-        self.geometry("400x730")  # Increased height for advanced timing section with monitor
+        self.geometry("400x670")  # Compact initial size (all sections closed)
         self.resizable(False, False)
 
         # Set window icon
@@ -1642,12 +1694,27 @@ class AntarcticGUI(ctk.CTk):
         self._is_closing = False  # Flag to prevent callbacks after close
         self.license_label = None  # Will be created in create_footer
 
+        # Initialize updater
+        try:
+            from config_updater import GITHUB_REPO
+        except:
+            GITHUB_REPO = "TU_USUARIO/antarctic-autoclicker"
+
+        self.updater = Updater(
+            current_version=get_version_from_file(),
+            github_repo=GITHUB_REPO
+        )
+
         self.setup_ui()
         self.clicker.start()
         self.load_last_profile()
 
         # Start background license validation (every 5 minutes)
         self.start_license_validation()
+
+        # Check for updates on startup (after 3 seconds)
+        after_id = self.after(3000, self.check_for_updates)
+        self._after_ids.append(after_id)
 
     def setup_ui(self):
         self.configure(fg_color=COLORS['bg_primary'])
@@ -1665,12 +1732,12 @@ class AntarcticGUI(ctk.CTk):
         logo_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
         logo_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Main title - Modern professional font
+        # Main title - Neon blue glow effect
         title = ctk.CTkLabel(
             logo_frame,
             text="A N T A R C T I C",
-            font=("Bahnschrift SemiBold", 34, "bold"),
-            text_color=COLORS['accent_cyan']
+            font=("Bahnschrift SemiBold", 36, "bold"),
+            text_color=COLORS['accent_blue']
         )
         title.pack()
 
@@ -1679,20 +1746,20 @@ class AntarcticGUI(ctk.CTk):
             logo_frame,
             text="by bachi",
             font=("Arial", 9),
-            text_color=COLORS['text_dim']
+            text_color=COLORS['text_secondary']
         )
         tagline.pack(pady=(4, 0))
     def create_main_content(self):
         """Create all main content in Frutiger Aero style"""
-        # Main container with enhanced glass-like effect
+        # Main container with fire red border
         main_container = ctk.CTkFrame(
             self,
             fg_color=COLORS['bg_secondary'],
             corner_radius=18,
-            border_width=2,
+            border_width=3,
             border_color=COLORS['accent_blue']
         )
-        main_container.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        main_container.pack(fill="x", padx=12, pady=(0, 12))
 
         # Status bar at top
         self.create_status_bar(main_container)
@@ -1707,7 +1774,7 @@ class AntarcticGUI(ctk.CTk):
         self.create_footer(main_container)
     
     def create_status_bar(self, parent):
-        """Frutiger Aero status bar - compact and glowing"""
+        """Status bar with fire red accents"""
         status_frame = ctk.CTkFrame(
             parent,
             fg_color=COLORS['bg_card'],
@@ -1747,26 +1814,26 @@ class AntarcticGUI(ctk.CTk):
         self.stats_label.pack(side="right", padx=15)
         
     def create_controls(self, parent):
-        """Frutiger Aero controls - compact sliders and settings"""
+        """Compact controls with collapsible sections"""
         controls_frame = ctk.CTkFrame(
             parent,
             fg_color="transparent"
         )
-        controls_frame.pack(fill="both", expand=True, padx=12, pady=0)
+        controls_frame.pack(fill="x", padx=12, pady=0)
 
-        # Sliders section
-        self.create_compact_sliders(controls_frame)
+        # Collapsible sliders section (CLOSED by default)
+        self.create_collapsible_sliders(controls_frame)
 
-        # Quick settings row
+        # Quick settings row (always visible)
         self.create_quick_settings(controls_frame)
 
-        # Profile management
+        # Profile management (always visible)
         self.create_profile_section(controls_frame)
 
-        # Advanced timing controls
+        # Advanced timing controls (collapsible, closed by default)
         self.create_advanced_timing_section(controls_frame)
 
-        # Latency compensation
+        # Latency compensation (collapsible, closed by default) - with spacing
         self.create_latency_section(controls_frame)
 
     def create_advanced_timing_section(self, parent):
@@ -1780,7 +1847,7 @@ class AntarcticGUI(ctk.CTk):
             border_color=COLORS['border'],
             height=90
         )
-        timing_frame.pack(fill="x", pady=(8, 0))
+        timing_frame.pack(fill="x", pady=(0, 8))
         timing_frame.pack_propagate(False)
 
         # Content container
@@ -1797,6 +1864,17 @@ class AntarcticGUI(ctk.CTk):
             font=("Segoe UI", 10, "bold"),
             text_color=COLORS['accent_cyan']
         ).pack(side="left")
+
+        # Help icon
+        adv_help = ctk.CTkLabel(
+            header_row,
+            text="?",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim'],
+            width=14
+        )
+        adv_help.pack(side="left", padx=(4, 0))
+        ToolTip(adv_help, "Timing avanzado: Markov, Gaussian, Acceleration")
 
         # Settings button
         settings_btn = ctk.CTkButton(
@@ -1907,6 +1985,17 @@ class AntarcticGUI(ctk.CTk):
             text_color=COLORS['accent_cyan']
         )
         title_label.pack(side="left")
+
+        # Help icon
+        latency_help = ctk.CTkLabel(
+            header,
+            text="?",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim'],
+            width=14
+        )
+        latency_help.pack(side="left", padx=(4, 0))
+        ToolTip(latency_help, "Compensa latencia de red en juegos online")
 
         # Enable toggle
         self.latency_enabled_var = ctk.BooleanVar(value=False)
@@ -2048,13 +2137,16 @@ class AntarcticGUI(ctk.CTk):
         profile_frame.pack(fill="x", pady=(8, 0))
         profile_frame.pack_propagate(False)
 
-        # Profile dropdown
+        # Profile dropdown with help icon
+        left_frame = ctk.CTkFrame(profile_frame, fg_color="transparent")
+        left_frame.pack(side="left", padx=10, pady=6)
+
         self.profile_var = ctk.StringVar(value="Profile")
         self.profile_menu = ctk.CTkOptionMenu(
-            profile_frame,
+            left_frame,
             variable=self.profile_var,
             values=["Profile"] + self.profile_manager.get_profile_names(),
-            width=145,
+            width=130,
             height=32,
             corner_radius=8,
             fg_color=COLORS['bg_primary'],
@@ -2065,7 +2157,18 @@ class AntarcticGUI(ctk.CTk):
             text_color=COLORS['text_primary'],
             font=("Segoe UI", 10)
         )
-        self.profile_menu.pack(side="left", padx=10, pady=6)
+        self.profile_menu.pack(side="left")
+
+        # Help icon
+        profile_help = ctk.CTkLabel(
+            left_frame,
+            text="?",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim'],
+            width=14
+        )
+        profile_help.pack(side="left", padx=(4, 0))
+        ToolTip(profile_help, "Guarda y carga configuraciones")
 
         # Mini buttons
         btn_frame = ctk.CTkFrame(profile_frame, fg_color="transparent")
@@ -2087,33 +2190,112 @@ class AntarcticGUI(ctk.CTk):
             )
             btn.pack(side="left", padx=3)
 
-    def create_compact_sliders(self, parent):
-        """Compact Frutiger Aero sliders"""
-        sliders_frame = ctk.CTkFrame(
+    def create_collapsible_sliders(self, parent):
+        """Collapsible sliders section (closed by default)"""
+        # Main container
+        self.sliders_section = ctk.CTkFrame(
             parent,
             fg_color=COLORS['bg_card'],
             corner_radius=12,
             border_width=1,
             border_color=COLORS['border']
         )
-        sliders_frame.pack(fill="x", pady=(0, 8))
+        self.sliders_section.pack(fill="x", pady=(0, 8))
 
+        # Header with toggle button
+        header_frame = ctk.CTkFrame(self.sliders_section, fg_color="transparent", height=36)
+        header_frame.pack(fill="x", padx=12, pady=8)
+        header_frame.pack_propagate(False)
+
+        # Title
+        ctk.CTkLabel(
+            header_frame,
+            text="BASIC SETTINGS",
+            font=("Segoe UI", 11, "bold"),
+            text_color=COLORS['text_primary']
+        ).pack(side="left")
+
+        # Help icon
+        help_label = ctk.CTkLabel(
+            header_frame,
+            text="?",
+            font=("Segoe UI", 10),
+            text_color=COLORS['text_dim'],
+            width=16,
+            height=16
+        )
+        help_label.pack(side="left", padx=(4, 0))
+        ToolTip(help_label, "Clicks, Speed, Duration y Delay del autoclicker")
+
+        # Toggle button
+        self.sliders_toggle_btn = ctk.CTkButton(
+            header_frame,
+            text="▼",
+            width=30,
+            height=24,
+            font=("Segoe UI", 12),
+            fg_color=COLORS['bg_secondary'],
+            hover_color=COLORS['bg_primary'],
+            text_color=COLORS['text_secondary'],
+            corner_radius=6,
+            command=self.toggle_sliders_section
+        )
+        self.sliders_toggle_btn.pack(side="right")
+
+        # Content frame (hidden by default)
+        self.sliders_content = ctk.CTkFrame(self.sliders_section, fg_color="transparent")
+        # Don't pack it - it's hidden by default
+
+        # Create sliders inside content frame
         self.clicks_slider, self.clicks_label = self.create_aero_slider(
-            sliders_frame, "Clicks", 1, 100, 24,
+            self.sliders_content, "Clicks", 1, 100, 24,
             lambda v: setattr(self.clicker.config, 'clicks', int(v))
         )
         self.interval_slider, self.interval_label = self.create_aero_slider(
-            sliders_frame, "Speed", 1, 200, 10,
+            self.sliders_content, "Speed", 1, 200, 10,
             lambda v: setattr(self.clicker.config, 'interval', int(v))
         )
         self.duration_slider, self.duration_label = self.create_aero_slider(
-            sliders_frame, "Duration", 0.01, 2.0, 0.30,
+            self.sliders_content, "Duration", 0.01, 2.0, 0.30,
             lambda v: setattr(self.clicker.config, 'duration', float(v))
         )
         self.delay_slider, self.delay_label = self.create_aero_slider(
-            sliders_frame, "Delay", 0.0, 1.0, 0.0,
+            self.sliders_content, "Delay", 0.0, 1.0, 0.0,
             lambda v: setattr(self.clicker.config, 'auto_burst_delay', float(v))
         )
+
+        # Track state
+        self.sliders_section_open = False
+
+    def resize_window(self):
+        """Dynamically resize window based on open sections"""
+        base_height = 670  # Base height with all sections closed
+
+        # Add height for each open section
+        if self.sliders_section_open:
+            base_height += 200  # Basic settings section height
+
+        if hasattr(self, 'latency_expanded') and self.latency_expanded:
+            base_height += 190  # Latency section height
+
+        self.geometry(f"400x{base_height}")
+
+    def toggle_sliders_section(self):
+        """Toggle sliders section visibility and resize window"""
+        if self.sliders_section_open:
+            # Close section
+            self.sliders_content.pack_forget()
+            self.sliders_toggle_btn.configure(text="▼")
+            self.sliders_section_open = False
+            # Shrink window
+            self.resize_window()
+        else:
+            # Open section
+            self.sliders_content.pack(fill="x", padx=0, pady=(0, 8))
+            self.sliders_toggle_btn.configure(text="▲")
+            self.sliders_section_open = True
+            # Expand window
+            self.resize_window()
 
     def create_aero_slider(self, parent, label, from_, to, initial, command):
         """Frutiger Aero styled compact slider"""
@@ -2186,12 +2368,26 @@ class AntarcticGUI(ctk.CTk):
         type_frame = ctk.CTkFrame(row, fg_color="transparent")
         type_frame.pack(side="left", fill="x", expand=True, padx=(0, 6))
 
+        # Type label with help
+        type_label_frame = ctk.CTkFrame(type_frame, fg_color="transparent")
+        type_label_frame.pack(anchor="w", pady=(0, 4), fill="x")
+
         ctk.CTkLabel(
-            type_frame,
+            type_label_frame,
             text="Type",
             font=("Segoe UI", 10),
             text_color=COLORS['text_secondary']
-        ).pack(anchor="w", pady=(0, 4))
+        ).pack(side="left")
+
+        type_help = ctk.CTkLabel(
+            type_label_frame,
+            text="?",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim'],
+            width=14
+        )
+        type_help.pack(side="left", padx=(4, 0))
+        ToolTip(type_help, "Single, Double o Triple click")
 
         self.type_selector = ctk.CTkSegmentedButton(
             type_frame,
@@ -2213,12 +2409,26 @@ class AntarcticGUI(ctk.CTk):
         button_frame = ctk.CTkFrame(row, fg_color="transparent")
         button_frame.pack(side="right", fill="x", expand=True, padx=(6, 0))
 
+        # Button label with help
+        button_label_frame = ctk.CTkFrame(button_frame, fg_color="transparent")
+        button_label_frame.pack(anchor="w", pady=(0, 4), fill="x")
+
         ctk.CTkLabel(
-            button_frame,
+            button_label_frame,
             text="Button",
             font=("Segoe UI", 10),
             text_color=COLORS['text_secondary']
-        ).pack(anchor="w", pady=(0, 4))
+        ).pack(side="left")
+
+        button_help = ctk.CTkLabel(
+            button_label_frame,
+            text="?",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim'],
+            width=14
+        )
+        button_help.pack(side="left", padx=(4, 0))
+        ToolTip(button_help, "Botón del mouse a clickear")
 
         self.button_selector = ctk.CTkSegmentedButton(
             button_frame,
@@ -2240,8 +2450,12 @@ class AntarcticGUI(ctk.CTk):
         options_row = ctk.CTkFrame(settings_frame, fg_color="transparent")
         options_row.pack(fill="x", padx=12, pady=(0, 10))
 
+        # Humanize with help
+        humanize_frame = ctk.CTkFrame(options_row, fg_color="transparent")
+        humanize_frame.pack(side="left", padx=(0, 8))
+
         self.humanize_checkbox = ctk.CTkCheckBox(
-            options_row,
+            humanize_frame,
             text="Humanize",
             font=("Segoe UI", 10),
             command=self.toggle_humanization,
@@ -2252,10 +2466,24 @@ class AntarcticGUI(ctk.CTk):
             fg_color=COLORS['accent_blue'],
             hover_color=COLORS['accent_cyan']
         )
-        self.humanize_checkbox.pack(side="left", padx=(0, 8))
+        self.humanize_checkbox.pack(side="left")
+
+        humanize_help = ctk.CTkLabel(
+            humanize_frame,
+            text="?",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim'],
+            width=14
+        )
+        humanize_help.pack(side="left", padx=(4, 0))
+        ToolTip(humanize_help, "Agrega delays aleatorios para parecer humano")
+
+        # Burst Var with help
+        burst_frame = ctk.CTkFrame(options_row, fg_color="transparent")
+        burst_frame.pack(side="right", padx=(8, 0))
 
         self.advanced_checkbox = ctk.CTkCheckBox(
-            options_row,
+            burst_frame,
             text="Burst Var",
             font=("Segoe UI", 10),
             command=self.toggle_advanced_timing,
@@ -2266,51 +2494,81 @@ class AntarcticGUI(ctk.CTk):
             fg_color=COLORS['accent_green'],
             hover_color=COLORS['accent_green']
         )
-        self.advanced_checkbox.pack(side="right", padx=(8, 0))
+        self.advanced_checkbox.pack(side="left")
+
+        burst_help = ctk.CTkLabel(
+            burst_frame,
+            text="?",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim'],
+            width=14
+        )
+        burst_help.pack(side="left", padx=(4, 0))
+        ToolTip(burst_help, "Varía la cantidad de clicks por burst")
 
     def create_action_buttons(self, parent):
-        """Frutiger Aero action button - single auto-burst button"""
+        """Action button - auto-burst"""
         buttons_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        buttons_frame.pack(fill="x", padx=12, pady=(0, 8))
+        buttons_frame.pack(fill="x", padx=12, pady=(0, 4))
 
-        # Single auto-burst button
+        # Single auto-burst button with fire red accent
         self.autoburst_button = ctk.CTkButton(
             buttons_frame,
             text="AUTO-BURST",
-            height=48,
+            height=42,
             corner_radius=12,
             fg_color=COLORS['bg_card'],
             hover_color=COLORS['accent_blue'],
             border_width=2,
-            border_color=COLORS['border'],
-            font=("Segoe UI", 14, "bold"),
+            border_color=COLORS['accent_blue'],
+            font=("Segoe UI", 13, "bold"),
             text_color=COLORS['text_primary'],
             command=self.toggle_auto_burst
         )
         self.autoburst_button.pack(fill="x")
 
     def create_footer(self, parent):
-        """Minimalist Frutiger Aero footer with license info"""
-        footer = ctk.CTkFrame(parent, fg_color="transparent", height=50)
-        footer.pack(fill="x", padx=12, pady=(0, 8))
+        """Footer with version and license info"""
+        footer = ctk.CTkFrame(parent, fg_color="transparent", height=65)
+        footer.pack(fill="x", padx=12, pady=(0, 10))
         footer.pack_propagate(False)
 
-        # Hotkeys label
-        ctk.CTkLabel(
-            footer,
-            text="F2: Burst  •  F3: Capture  •  F5: Auto",
-            font=("Segoe UI", 10),
-            text_color=COLORS['text_secondary']
-        ).pack(side="bottom", pady=(0, 2))
-
-        # License info label (subtle)
+        # License info label
         self.license_label = ctk.CTkLabel(
             footer,
             text="",
-            font=("Segoe UI", 9),
-            text_color=COLORS['text_dim']
+            font=("Segoe UI", 10),
+            text_color=COLORS['text_secondary']
         )
-        self.license_label.pack(side="bottom", pady=(0, 2))
+        self.license_label.pack(side="bottom", pady=(4, 0))
+
+        # Version and update button
+        version_frame = ctk.CTkFrame(footer, fg_color="transparent")
+        version_frame.pack(side="bottom", pady=(0, 4))
+
+        self.version_label = ctk.CTkLabel(
+            version_frame,
+            text=f"v{self.updater.current_version}",
+            font=("Segoe UI", 11, "bold"),
+            text_color=COLORS['text_primary']
+        )
+        self.version_label.pack(side="left", padx=(0, 10))
+
+        self.update_btn = ctk.CTkButton(
+            version_frame,
+            text="Check Updates",
+            width=120,
+            height=28,
+            font=("Segoe UI", 10),
+            fg_color=COLORS['bg_card'],
+            hover_color=COLORS['accent_blue'],
+            text_color=COLORS['text_primary'],
+            border_width=2,
+            border_color=COLORS['accent_blue'],
+            corner_radius=8,
+            command=self.check_for_updates
+        )
+        self.update_btn.pack(side="left")
 
         # Update license info
         self.update_license_display()
@@ -2376,14 +2634,14 @@ class AntarcticGUI(ctk.CTk):
             self.latency_expand_label.configure(text="▶")
             self.latency_expanded = False
             # Reducir ventana
-            self.geometry("400x730")
+            self.resize_window()
         else:
             # Expandir
             self.latency_content.pack(fill="x", padx=12, pady=(0, 10))
             self.latency_expand_label.configure(text="▼")
             self.latency_expanded = True
             # Aumentar ventana para mostrar contenido
-            self.geometry("400x920")
+            self.resize_window()
 
     def auto_detect_game(self):
         """Auto-detecta el juego y el puerto"""
@@ -2626,9 +2884,20 @@ class AntarcticGUI(ctk.CTk):
         self.timing_monitor_label.configure(text=monitor_text)
         
     def sync_auto_burst_state(self):
-        self.autoburst_button.configure(
-            fg_color=COLORS['accent_green'] if self.clicker.config.auto_burst_enabled else COLORS['bg_card']
-        )
+        if self.clicker.config.auto_burst_enabled:
+            self.autoburst_button.configure(
+                text="AUTO-BURST: ON",
+                fg_color=COLORS['accent_blue'],
+                border_color=COLORS['accent_blue'],
+                text_color=COLORS['bg_primary']
+            )
+        else:
+            self.autoburst_button.configure(
+                text="AUTO-BURST",
+                fg_color=COLORS['bg_card'],
+                border_color=COLORS['accent_blue'],
+                text_color=COLORS['text_primary']
+            )
 
     def load_last_profile(self):
         current = self.profile_manager.get_current_profile()
@@ -2833,6 +3102,207 @@ class AntarcticGUI(ctk.CTk):
                 pass
             sys.exit(0)
 
+    def check_for_updates(self):
+        """Check for updates in background thread"""
+        if self._is_closing:
+            return
+
+        self.update_btn.configure(text="Checking...", state="disabled")
+
+        def check_thread():
+            try:
+                has_update, version, url, notes = self.updater.is_update_available()
+                self._safe_after(0, self._on_update_check_complete, has_update, version, url, notes)
+            except Exception as e:
+                print(f"Error checking updates: {e}")
+                self._safe_after(0, self._on_update_check_failed)
+
+        threading.Thread(target=check_thread, daemon=True).start()
+
+    def _on_update_check_complete(self, has_update, version, url, notes):
+        """Handle update check completion"""
+        if self._is_closing:
+            return
+
+        self.update_btn.configure(text="Check Updates", state="normal")
+
+        if has_update:
+            self.show_update_dialog(version, url, notes)
+        else:
+            messagebox.showinfo(
+                "No Updates",
+                f"You're running the latest version (v{self.updater.current_version})"
+            )
+
+    def _on_update_check_failed(self):
+        """Handle update check failure"""
+        if self._is_closing:
+            return
+
+        self.update_btn.configure(text="Check Updates", state="normal")
+        messagebox.showerror(
+            "Update Check Failed",
+            "Could not check for updates. Please try again later."
+        )
+
+    def show_update_dialog(self, version, url, notes):
+        """Show update available dialog"""
+        if self._is_closing:
+            return
+
+        # Create custom dialog
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Update Available")
+        dialog.geometry("450x350")
+        dialog.resizable(False, False)
+        dialog.configure(fg_color=COLORS['bg_primary'])
+
+        # Center dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
+        y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
+        dialog.geometry(f'+{x}+{y}')
+
+        # Make modal
+        dialog.transient(self)
+        dialog.grab_set()
+
+        # Header
+        header = ctk.CTkLabel(
+            dialog,
+            text=f"🎉 New Version Available: v{version}",
+            font=("Segoe UI", 16, "bold"),
+            text_color=COLORS['accent_cyan']
+        )
+        header.pack(pady=(20, 10))
+
+        # Current version
+        current = ctk.CTkLabel(
+            dialog,
+            text=f"Current: v{self.updater.current_version}",
+            font=("Segoe UI", 11),
+            text_color=COLORS['text_secondary']
+        )
+        current.pack(pady=(0, 15))
+
+        # Release notes
+        notes_label = ctk.CTkLabel(
+            dialog,
+            text="What's New:",
+            font=("Segoe UI", 12, "bold"),
+            text_color=COLORS['text_primary']
+        )
+        notes_label.pack(pady=(0, 5))
+
+        notes_frame = ctk.CTkFrame(
+            dialog,
+            fg_color=COLORS['bg_card'],
+            corner_radius=8,
+            border_width=1,
+            border_color=COLORS['border']
+        )
+        notes_frame.pack(fill="both", expand=True, padx=20, pady=(0, 15))
+
+        notes_text = ctk.CTkTextbox(
+            notes_frame,
+            font=("Segoe UI", 10),
+            fg_color=COLORS['bg_card'],
+            text_color=COLORS['text_primary'],
+            wrap="word",
+            activate_scrollbars=True
+        )
+        notes_text.pack(fill="both", expand=True, padx=5, pady=5)
+        notes_text.insert("1.0", notes)
+        notes_text.configure(state="disabled")
+
+        # Progress bar (hidden initially)
+        self.update_progress = ctk.CTkProgressBar(
+            dialog,
+            width=400,
+            height=8,
+            fg_color=COLORS['bg_card'],
+            progress_color=COLORS['accent_cyan']
+        )
+        self.update_progress.set(0)
+
+        # Buttons
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(pady=(0, 20))
+
+        def start_update():
+            update_btn.configure(state="disabled", text="Downloading...")
+            later_btn.configure(state="disabled")
+            self.update_progress.pack(padx=20, pady=(0, 10))
+            self.download_and_install_update(url, dialog)
+
+        update_btn = ctk.CTkButton(
+            btn_frame,
+            text="Update Now",
+            width=140,
+            height=35,
+            font=("Segoe UI", 12, "bold"),
+            fg_color=COLORS['accent_blue'],
+            hover_color=COLORS['accent_cyan'],
+            command=start_update
+        )
+        update_btn.pack(side="left", padx=5)
+
+        later_btn = ctk.CTkButton(
+            btn_frame,
+            text="Later",
+            width=140,
+            height=35,
+            font=("Segoe UI", 12),
+            fg_color=COLORS['bg_card'],
+            hover_color=COLORS['border'],
+            border_width=1,
+            border_color=COLORS['border'],
+            command=dialog.destroy
+        )
+        later_btn.pack(side="left", padx=5)
+
+    def download_and_install_update(self, url, dialog):
+        """Download and install update"""
+        def progress_callback(downloaded, total):
+            if total > 0:
+                progress = downloaded / total
+                self._safe_after(0, lambda: self.update_progress.set(progress))
+
+        def download_thread():
+            try:
+                # Download
+                update_file = self.updater.download_update(url, progress_callback)
+
+                if update_file:
+                    # Apply update
+                    if self.updater.apply_update(update_file):
+                        self._safe_after(0, lambda: messagebox.showinfo(
+                            "Update Complete",
+                            "Update downloaded! The application will now restart."
+                        ))
+                        self._safe_after(100, self.quit)
+                    else:
+                        self._safe_after(0, lambda: messagebox.showerror(
+                            "Update Failed",
+                            "Failed to apply update. Please try again."
+                        ))
+                        self._safe_after(0, dialog.destroy)
+                else:
+                    self._safe_after(0, lambda: messagebox.showerror(
+                        "Download Failed",
+                        "Failed to download update. Please try again."
+                    ))
+                    self._safe_after(0, dialog.destroy)
+            except Exception as e:
+                print(f"Update error: {e}")
+                self._safe_after(0, lambda: messagebox.showerror(
+                    "Update Error",
+                    f"An error occurred: {str(e)}"
+                ))
+                self._safe_after(0, dialog.destroy)
+
+        threading.Thread(target=download_thread, daemon=True).start()
+
     def on_close(self):
         self._is_closing = True
         self._cancel_all_callbacks()
@@ -2847,7 +3317,7 @@ class AntarcticGUI(ctk.CTk):
             except:
                 pass
         self._after_ids.clear()
-        
+
     def run(self):
         self.mainloop()
 
