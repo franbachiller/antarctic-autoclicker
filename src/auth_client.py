@@ -212,17 +212,28 @@ class AuthClient:
                 self.license_type = result.get('licenseType', 'Unknown')
 
                 print(f"[DEBUG ACTIVATE] Result: {result}")
+                print(f"[DEBUG ACTIVATE] expiresAt from server: {result.get('expiresAt')}")
 
                 if result.get('expiresAt'):
-                    self.expires_at = datetime.fromisoformat(
-                        result['expiresAt'].replace('Z', '+00:00')
-                    )
-                    # License expires at the same time as session for now
-                    self.license_expires = self.expires_at
-                    print(f"[DEBUG ACTIVATE] Set license_expires to: {self.license_expires}")
+                    try:
+                        self.expires_at = datetime.fromisoformat(
+                            result['expiresAt'].replace('Z', '+00:00')
+                        )
+                        # License expires at the same time as session for now
+                        self.license_expires = self.expires_at
+                        print(f"[DEBUG ACTIVATE] Set license_expires to: {self.license_expires}")
+                    except Exception as e:
+                        print(f"[DEBUG ACTIVATE] Error parsing expiresAt: {e}")
+                        # Set to None if parsing fails
+                        self.expires_at = None
+                        self.license_expires = None
+                else:
+                    print(f"[DEBUG ACTIVATE] No expiresAt in response - setting to None")
+                    self.expires_at = None
+                    self.license_expires = None
 
                 self.save_session()
-                print(f"[DEBUG ACTIVATE] Session saved")
+                print(f"[DEBUG ACTIVATE] Session saved - license_expires: {self.license_expires}")
                 return True, result.get('message', 'Activation successful'), result
             else:
                 return False, result.get('error', 'Activation failed'), None
