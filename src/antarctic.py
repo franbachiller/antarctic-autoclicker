@@ -3162,7 +3162,7 @@ class AntarcticGUI(ctk.CTk):
         # Create custom dialog
         dialog = ctk.CTkToplevel(self)
         dialog.title("Update Available")
-        dialog.geometry("450x350")
+        dialog.geometry("450x450")
         dialog.resizable(False, False)
         dialog.configure(fg_color=COLORS['bg_primary'])
 
@@ -3179,7 +3179,7 @@ class AntarcticGUI(ctk.CTk):
         # Header
         header = ctk.CTkLabel(
             dialog,
-            text=f"🎉 New Version Available: v{version}",
+            text=f"New Version Available: v{version}",
             font=("Segoe UI", 16, "bold"),
             text_color=COLORS['accent_cyan']
         )
