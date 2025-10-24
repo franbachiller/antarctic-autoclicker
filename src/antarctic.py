@@ -1084,12 +1084,12 @@ class AutoClicker:
         if self.config.acceleration_enabled:
             self.acceleration_profile.reset()
 
-        # Apply advanced threading optimizations
+        # Apply advanced threading optimizations - always use ABOVE_NORMAL for better performance
         if self.config.advanced_timing_enabled and self.config.advanced_profile:
             self.threading_optimizer.optimize_for_race_conditions(self.config.advanced_profile)
         else:
             current_thread = kernel32.GetCurrentThread()
-            priority = THREAD_PRIORITY_BELOW_NORMAL if self.config.ultra_mode else THREAD_PRIORITY_NORMAL
+            priority = THREAD_PRIORITY_BELOW_NORMAL if self.config.ultra_mode else THREAD_PRIORITY_ABOVE_NORMAL
             kernel32.SetThreadPriority(current_thread, priority)
 
         try:
@@ -1099,7 +1099,7 @@ class AutoClicker:
             self._precalculate_click_params(client_x, client_y)
             ultra_mode = self.config.ultra_mode
             humanize = self.config.humanize_advanced
-            stats_update_interval = 50 if ultra_mode else 10
+            stats_update_interval = 100  # Reduced GUI updates for better performance
             hwnd = self.target_hwnd
 
             if not self.check_window_valid(hwnd):
@@ -1107,8 +1107,18 @@ class AutoClicker:
 
             # Execute burst with timing system
             config_clicks = self.config.clicks
-            
-            while time.time() < end_time and self.running:
+
+            # Determine click multiplier once (optimization)
+            click_multiplier = 1
+            if self.config.click_type == 'double':
+                click_multiplier = 2
+            elif self.config.click_type == 'triple':
+                click_multiplier = 3
+
+            # Cache timing values for performance
+            current_time = time.time()
+
+            while current_time < end_time and self.running:
                 # Determine clicks per batch
                 if humanize:
                     clicks_to_send = random.randint(5, 15)
@@ -1119,13 +1129,6 @@ class AutoClicker:
                     clicks_to_send = profile.burst_pattern[pattern_index]
                 else:
                     clicks_to_send = config_clicks
-                
-                # Determine click multiplier based on click_type
-                click_multiplier = 1
-                if self.config.click_type == 'double':
-                    click_multiplier = 2
-                elif self.config.click_type == 'triple':
-                    click_multiplier = 3
 
                 # Send the batch of clicks (multiplied by click_type)
                 for i in range(clicks_to_send):
@@ -1150,13 +1153,12 @@ class AutoClicker:
                     self.current_burst_clicks += click_multiplier
                     click_count += 1
 
-                    # Update stats periodically
+                    # Update stats periodically (less frequent for better performance)
                     if click_count % stats_update_interval == 0 and self.gui_callback:
                         self.gui_callback('stats_update')
-                
-                # Small pause between batches if needed
-                if time.time() < end_time and self.running and not ultra_mode:
-                    time.sleep(0.001)
+
+                # Update time once per batch instead of every iteration
+                current_time = time.time()
 
             if self.gui_callback:
                 self.gui_callback('stats_update')
