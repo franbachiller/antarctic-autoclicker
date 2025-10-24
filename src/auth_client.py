@@ -134,8 +134,17 @@ class AuthClient:
             self.license_type = data.get('license_type')
 
             if data.get('expires'):
+                from datetime import timezone
                 self.expires_at = datetime.fromisoformat(data['expires'])
-                if self.expires_at < datetime.now():
+
+                # Normalize to UTC for comparison
+                now = datetime.now(timezone.utc)
+                expires = self.expires_at
+                if expires.tzinfo is None:
+                    expires = expires.replace(tzinfo=timezone.utc)
+
+                # Add buffer to avoid false positives
+                if expires < (now - timedelta(minutes=5)):
                     self.clear_session()
                     return False
 
@@ -243,19 +252,34 @@ class AuthClient:
 
             # Check if license has expired locally first
             if self.license_expires:
-                now = datetime.now()
-                if self.license_expires.tzinfo:
-                    from datetime import timezone
-                    now = datetime.now(timezone.utc)
+                from datetime import timezone
 
-                if now >= self.license_expires:
+                # Normalize both datetimes to UTC for comparison
+                now = datetime.now(timezone.utc)
+                license_exp = self.license_expires
+
+                # If license_expires is naive, assume it's UTC
+                if license_exp.tzinfo is None:
+                    license_exp = license_exp.replace(tzinfo=timezone.utc)
+
+                # Add a small buffer (5 minutes) to avoid false positives due to clock drift
+                if now >= (license_exp + timedelta(minutes=5)):
                     self.clear_session()
                     return False, "License has expired"
 
             # If skip_network is True, just validate locally
             if skip_network:
                 if self.session_token and self.expires_at:
-                    if datetime.now() < self.expires_at:
+                    from datetime import timezone
+                    now = datetime.now(timezone.utc)
+                    expires = self.expires_at
+
+                    # If expires_at is naive, assume it's UTC
+                    if expires.tzinfo is None:
+                        expires = expires.replace(tzinfo=timezone.utc)
+
+                    # Add buffer to avoid false positives
+                    if now < (expires - timedelta(minutes=1)):
                         return True, "Valid (offline mode)"
                 return False, "Session expired"
 
@@ -368,13 +392,17 @@ class AuthClient:
             if not self.license_expires:
                 return "Unknown"
 
-            now = datetime.now()
-            if self.license_expires.tzinfo:
-                # Make now timezone aware if license_expires is
-                from datetime import timezone
-                now = datetime.now(timezone.utc)
+            from datetime import timezone
 
-            remaining = self.license_expires - now
+            # Normalize to UTC
+            now = datetime.now(timezone.utc)
+            license_exp = self.license_expires
+
+            # If license_expires is naive, assume it's UTC
+            if license_exp.tzinfo is None:
+                license_exp = license_exp.replace(tzinfo=timezone.utc)
+
+            remaining = license_exp - now
 
             if remaining.total_seconds() <= 0:
                 return "Expired"

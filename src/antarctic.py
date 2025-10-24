@@ -1137,18 +1137,18 @@ class AutoClicker:
                         # Send click down
                         user32.SendMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
 
-                        # Apply delay if not ultra mode
-                        if not ultra_mode:
-                            delay = self.get_timing_delay()
-                            if delay > 0:
-                                time.sleep(delay)
-
                         # Send click up
                         user32.SendMessageW(hwnd, self._msg_up, 0, self._lparam_up)
 
-                        # Small delay between double/triple clicks
+                        # Small delay between double/triple clicks (solo entre clics del mismo grupo)
                         if click_num < click_multiplier - 1:
                             time.sleep(0.05)
+
+                    # Apply delay AFTER all clicks in the sequence (not between them)
+                    if not ultra_mode:
+                        delay = self.get_timing_delay()
+                        if delay > 0:
+                            time.sleep(delay)
 
                     # Update counters (count as 1 action regardless of click_type)
                     self.total_clicks_sent += click_multiplier
