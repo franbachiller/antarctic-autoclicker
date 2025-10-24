@@ -211,14 +211,18 @@ class AuthClient:
                 self.session_token = result.get('sessionToken')
                 self.license_type = result.get('licenseType', 'Unknown')
 
+                print(f"[DEBUG ACTIVATE] Result: {result}")
+
                 if result.get('expiresAt'):
                     self.expires_at = datetime.fromisoformat(
                         result['expiresAt'].replace('Z', '+00:00')
                     )
                     # License expires at the same time as session for now
                     self.license_expires = self.expires_at
+                    print(f"[DEBUG ACTIVATE] Set license_expires to: {self.license_expires}")
 
                 self.save_session()
+                print(f"[DEBUG ACTIVATE] Session saved")
                 return True, result.get('message', 'Activation successful'), result
             else:
                 return False, result.get('error', 'Activation failed'), None
@@ -434,14 +438,25 @@ class AuthClient:
             str: Formatted expiration date or status
         """
         try:
-            if not self.license_expires:
+            # Load session if not already loaded
+            if not self.session_token:
+                self.load_session()
+
+            # Use license_expires if available, otherwise fallback to expires_at
+            expiration = self.license_expires or self.expires_at
+
+            print(f"[DEBUG] license_expires: {self.license_expires}")
+            print(f"[DEBUG] expires_at: {self.expires_at}")
+            print(f"[DEBUG] expiration: {expiration}")
+
+            if not expiration:
                 return "Unknown"
 
             from datetime import timezone
 
             # Normalize to UTC
             now = datetime.now(timezone.utc)
-            license_exp = self.license_expires
+            license_exp = expiration
 
             # If license_expires is naive, assume it's UTC
             if license_exp.tzinfo is None:
@@ -459,6 +474,9 @@ class AuthClient:
             return license_exp.strftime("%d/%m/%Y")
 
         except Exception as e:
+            print(f"Error getting expiration date: {e}")
+            import traceback
+            traceback.print_exc()
             return "Unknown"
 
     def get_license_info(self):
