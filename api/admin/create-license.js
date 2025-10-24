@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     }
 
     // Validate type
-    const validTypes = ['day', 'week', 'month', '3months', '6months', 'year', 'lifetime', 'standard', 'trial', '1-month', '3-month'];
+    const validTypes = ['day', 'week', 'month', '3months', '6months', 'year', 'lifetime'];
     if (!validTypes.includes(type)) {
       return res.status(400).json({
         error: 'Invalid license type',
@@ -72,19 +72,14 @@ export default async function handler(req, res) {
         case 'week':
           return new Date(now + 7 * day);
         case 'month':
-        case '1-month':
           return new Date(now + 30 * day);
         case '3months':
-        case '3-month':
           return new Date(now + 90 * day);
         case '6months':
           return new Date(now + 180 * day);
         case 'year':
           return new Date(now + 365 * day);
-        case 'trial':
-          return new Date(now + 30 * day);
         case 'lifetime':
-        case 'standard':
           return null; // No expiration
         default:
           return null;
