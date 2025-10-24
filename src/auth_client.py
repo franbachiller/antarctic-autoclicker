@@ -225,9 +225,12 @@ class AuthClient:
         except Exception as e:
             return False, f"Unexpected error: {str(e)}", None
 
-    def validate(self):
+    def validate(self, skip_network=False):
         """
         Validate current session with server
+
+        Args:
+            skip_network: If True, only validate locally without contacting server
 
         Returns:
             (valid: bool, message: str)
@@ -237,6 +240,24 @@ class AuthClient:
             if not self.session_token:
                 if not self.load_session():
                     return False, "No active session"
+
+            # Check if license has expired locally first
+            if self.license_expires:
+                now = datetime.now()
+                if self.license_expires.tzinfo:
+                    from datetime import timezone
+                    now = datetime.now(timezone.utc)
+
+                if now >= self.license_expires:
+                    self.clear_session()
+                    return False, "License has expired"
+
+            # If skip_network is True, just validate locally
+            if skip_network:
+                if self.session_token and self.expires_at:
+                    if datetime.now() < self.expires_at:
+                        return True, "Valid (offline mode)"
+                return False, "Session expired"
 
             hwid = self.get_hwid()
 
@@ -274,7 +295,16 @@ class AuthClient:
                         return True, "Offline mode (grace period)"
                 return False, f"Invalid server response"
 
-            if result.get('success'):
+            if result.get('valid'):
+                # Update license expiry if provided
+                if result.get('expiresAt'):
+                    try:
+                        self.license_expires = datetime.fromisoformat(
+                            result['expiresAt'].replace('Z', '+00:00')
+                        )
+                        self.save_session()
+                    except:
+                        pass
                 return True, result.get('message', 'Session valid')
             else:
                 # Session invalid, clear it

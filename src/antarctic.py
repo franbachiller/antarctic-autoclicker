@@ -727,8 +727,16 @@ class KeyManager:
     def deactivate(self):
         return self.auth_client.deactivate()
 
-    def validate(self):
-        return self.auth_client.validate()
+    def validate(self, skip_network=False):
+        return self.auth_client.validate(skip_network=skip_network)
+
+    def get_license_info(self):
+        """Get license information for display"""
+        return self.auth_client.get_license_info()
+
+    def get_time_remaining(self):
+        """Get time remaining on license"""
+        return self.auth_client.get_time_remaining()
 
 class AutoClicker:
     def __init__(self, gui_callback=None):
@@ -1632,10 +1640,14 @@ class AntarcticGUI(ctk.CTk):
         self.profile_manager = ProfileManager(max_profiles=5)
         self._after_ids = []  # Track scheduled callbacks
         self._is_closing = False  # Flag to prevent callbacks after close
+        self.license_label = None  # Will be created in create_footer
 
         self.setup_ui()
         self.clicker.start()
         self.load_last_profile()
+
+        # Start background license validation (every 5 minutes)
+        self.start_license_validation()
 
     def setup_ui(self):
         self.configure(fg_color=COLORS['bg_primary'])
@@ -2278,17 +2290,30 @@ class AntarcticGUI(ctk.CTk):
         self.autoburst_button.pack(fill="x")
 
     def create_footer(self, parent):
-        """Minimalist Frutiger Aero footer"""
-        footer = ctk.CTkFrame(parent, fg_color="transparent", height=36)
+        """Minimalist Frutiger Aero footer with license info"""
+        footer = ctk.CTkFrame(parent, fg_color="transparent", height=50)
         footer.pack(fill="x", padx=12, pady=(0, 8))
         footer.pack_propagate(False)
 
+        # Hotkeys label
         ctk.CTkLabel(
             footer,
             text="F2: Burst  •  F3: Capture  •  F5: Auto",
             font=("Segoe UI", 10),
             text_color=COLORS['text_secondary']
-        ).pack(side="bottom", pady=4)
+        ).pack(side="bottom", pady=(0, 2))
+
+        # License info label (subtle)
+        self.license_label = ctk.CTkLabel(
+            footer,
+            text="",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim']
+        )
+        self.license_label.pack(side="bottom", pady=(0, 2))
+
+        # Update license info
+        self.update_license_display()
 
     def toggle_humanization(self):
         self.clicker.config.humanize_enabled = bool(self.humanize_checkbox.get())
@@ -2692,6 +2717,85 @@ class AntarcticGUI(ctk.CTk):
         
     def start_license_monitor(self):
         pass
+
+    def update_license_display(self):
+        """Update the license information display"""
+        if not self.license_label:
+            return
+
+        try:
+            time_remaining = self.key_manager.get_time_remaining()
+            license_info = self.key_manager.get_license_info()
+            license_type = license_info.get('type', 'Unknown')
+
+            # Format the display text
+            if time_remaining == "Lifetime":
+                text = f"License: {license_type} • Lifetime"
+            elif time_remaining == "Expired":
+                text = "License: EXPIRED"
+                self.license_label.configure(text_color=COLORS['accent_red'])
+            elif time_remaining == "Unknown":
+                text = f"License: {license_type}"
+            else:
+                text = f"License: {license_type} • {time_remaining} remaining"
+
+            self.license_label.configure(text=text)
+        except Exception as e:
+            print(f"Error updating license display: {e}")
+
+    def start_license_validation(self):
+        """Start periodic license validation in background"""
+        if self._is_closing:
+            return
+
+        try:
+            # Validate license (skip network to avoid blocking UI)
+            valid, message = self.key_manager.validate(skip_network=True)
+
+            if not valid:
+                # License expired or invalid - close the app
+                self.show_license_expired_dialog()
+                return
+
+            # Update display
+            self.update_license_display()
+
+            # Schedule next validation in 5 minutes (300000 ms)
+            after_id = self.after(300000, self.start_license_validation)
+            self._after_ids.append(after_id)
+
+            # Also do a network validation every 30 minutes
+            after_id = self.after(1800000, self.validate_license_online)
+            self._after_ids.append(after_id)
+
+        except Exception as e:
+            print(f"Error in license validation: {e}")
+
+    def validate_license_online(self):
+        """Perform online license validation"""
+        if self._is_closing:
+            return
+
+        try:
+            valid, message = self.key_manager.validate(skip_network=False)
+
+            if not valid:
+                self.show_license_expired_dialog()
+                return
+
+            # Update display
+            self.update_license_display()
+        except Exception as e:
+            print(f"Error in online validation: {e}")
+
+    def show_license_expired_dialog(self):
+        """Show dialog when license expires and close app"""
+        import tkinter.messagebox as messagebox
+        messagebox.showerror(
+            "License Expired",
+            "Your license has expired. The application will now close.\n\nPlease contact support to renew your license."
+        )
+        self.on_close()
 
     def on_close(self):
         self._is_closing = True
