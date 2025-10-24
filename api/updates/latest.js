@@ -33,13 +33,12 @@ export default async function handler(req, res) {
     // IMPORTANTE: Actualiza estos valores manualmente cuando hagas una nueva release
     const latestVersion = {
       version: '1.0.2',
-      download_url: process.env.LATEST_EXE_URL || 'https://your-storage-url.com/Antarctic-1.0.2.exe',
+      download_url: process.env.LATEST_EXE_URL || 'https://drive.google.com/uc?export=download&id=143n0shZzODnmI9OpGNv2FrL9JrG6uO8V',
       release_notes: `
-- Fix: click type multiplier now correctly doubles/triples speed
-- Optimize performance: higher thread priority, reduced GUI updates
-- Fix license validation: remove incorrect buffer logic
+- Fix click speed and performance
+- Fix license validation system
 - Add 1 day license option
-- Restore small delay between batches to prevent excessive speed
+- Optimize autoclicker performance
       `.trim(),
       released_at: '2025-01-15T10:00:00Z'
     };
