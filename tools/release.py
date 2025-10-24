@@ -22,10 +22,11 @@ from pathlib import Path
 # Importar configuración
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from config_updater import GITHUB_REPO
+    from config_updater import GITHUB_REPO as DEFAULT_GITHUB_REPO
 except:
-    GITHUB_REPO = "TU_USUARIO/antarctic-autoclicker"
+    DEFAULT_GITHUB_REPO = "TU_USUARIO/antarctic-autoclicker"
 
+GITHUB_REPO = DEFAULT_GITHUB_REPO
 EXE_PATH = "dist/Antarctic.exe"
 
 
