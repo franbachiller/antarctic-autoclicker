@@ -2749,19 +2749,12 @@ class AntarcticGUI(ctk.CTk):
             return
 
         try:
-            # Validate license (skip network to avoid blocking UI)
-            valid, message = self.key_manager.validate(skip_network=True)
-
-            if not valid:
-                # License expired or invalid - close the app
-                self.show_license_expired_dialog()
-                return
-
-            # Update display
+            # Update display first (don't validate, just show info)
             self.update_license_display()
 
-            # Schedule next validation in 5 minutes (300000 ms)
-            after_id = self.after(300000, self.start_license_validation)
+            # Schedule periodic validations
+            # Check every 10 minutes (600000 ms) - not too aggressive
+            after_id = self.after(600000, self.periodic_license_check)
             self._after_ids.append(after_id)
 
             # Also do a network validation every 30 minutes
@@ -2770,6 +2763,35 @@ class AntarcticGUI(ctk.CTk):
 
         except Exception as e:
             print(f"Error in license validation: {e}")
+
+    def periodic_license_check(self):
+        """Periodic license check (called every 10 minutes)"""
+        if self._is_closing:
+            return
+
+        try:
+            # Validate license (skip network to avoid blocking UI)
+            valid, message = self.key_manager.validate(skip_network=True)
+
+            if not valid:
+                # License expired or invalid - close the app
+                print(f"License validation failed: {message}")
+                self.show_license_expired_dialog()
+                return
+
+            # Update display
+            self.update_license_display()
+
+            # Schedule next check in 10 minutes
+            after_id = self.after(600000, self.periodic_license_check)
+            self._after_ids.append(after_id)
+
+        except Exception as e:
+            print(f"Error in periodic license check: {e}")
+            # Don't close on error, just log it
+            # Schedule next check anyway
+            after_id = self.after(600000, self.periodic_license_check)
+            self._after_ids.append(after_id)
 
     def validate_license_online(self):
         """Perform online license validation"""
@@ -2790,12 +2812,26 @@ class AntarcticGUI(ctk.CTk):
 
     def show_license_expired_dialog(self):
         """Show dialog when license expires and close app"""
-        import tkinter.messagebox as messagebox
-        messagebox.showerror(
-            "License Expired",
-            "Your license has expired. The application will now close.\n\nPlease contact support to renew your license."
-        )
-        self.on_close()
+        try:
+            import tkinter.messagebox as messagebox
+            self._is_closing = True
+            self._cancel_all_callbacks()
+            messagebox.showerror(
+                "License Expired",
+                "Your license has expired. The application will now close.\n\nPlease contact support to renew your license."
+            )
+        except:
+            pass
+        finally:
+            try:
+                self.clicker.stop()
+            except:
+                pass
+            try:
+                self.destroy()
+            except:
+                pass
+            sys.exit(0)
 
     def on_close(self):
         self._is_closing = True
