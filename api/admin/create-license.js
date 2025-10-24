@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     }
 
     // Validate type
-    const validTypes = ['standard', 'trial', '1-month', '3-month', 'lifetime'];
+    const validTypes = ['week', 'month', '3months', '6months', 'year', 'lifetime', 'standard', 'trial', '1-month', '3-month'];
     if (!validTypes.includes(type)) {
       return res.status(400).json({
         error: 'Invalid license type',
@@ -61,12 +61,38 @@ export default async function handler(req, res) {
       });
     }
 
+    // Calculate expiration date based on type
+    function calculateExpirationDate(licenseType) {
+      const now = Date.now();
+      const day = 24 * 60 * 60 * 1000;
+
+      switch(licenseType) {
+        case 'week':
+          return new Date(now + 7 * day);
+        case 'month':
+        case '1-month':
+          return new Date(now + 30 * day);
+        case '3months':
+        case '3-month':
+          return new Date(now + 90 * day);
+        case '6months':
+          return new Date(now + 180 * day);
+        case 'year':
+          return new Date(now + 365 * day);
+        case 'trial':
+          return new Date(now + 30 * day);
+        case 'lifetime':
+        case 'standard':
+          return null; // No expiration
+        default:
+          return null;
+      }
+    }
+
     const licenses = [];
     for (let i = 0; i < count; i++) {
       const licenseKey = generateLicenseKey();
-      const expiresAt = type === 'trial' 
-        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-        : null;
+      const expiresAt = calculateExpirationDate(type);
 
       licenses.push({
         license_key: licenseKey,

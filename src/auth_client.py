@@ -460,8 +460,9 @@ class AuthClient:
             print(f"[DEBUG] expires_at: {self.expires_at}")
             print(f"[DEBUG] expiration: {expiration}")
 
+            # If no expiration date, it's a lifetime license
             if not expiration:
-                return "Unknown"
+                return "Lifetime"
 
             from datetime import timezone
 
