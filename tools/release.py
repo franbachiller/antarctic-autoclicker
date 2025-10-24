@@ -30,26 +30,30 @@ GITHUB_REPO = DEFAULT_GITHUB_REPO
 EXE_PATH = "dist/Antarctic.exe"
 
 
-def create_github_release(version, token, exe_path, release_notes=""):
+def create_github_release(version, token, exe_path, release_notes="", github_repo=None):
     """
     Crea una release en GitHub y sube el ejecutable
-    
+
     Args:
         version: Versión (ej: "1.0.1")
         token: GitHub Personal Access Token
         exe_path: Path al ejecutable
         release_notes: Notas de la release
-    
+        github_repo: Repositorio de GitHub (ej: "usuario/repo")
+
     Returns:
         bool: True si fue exitoso
     """
-    
+
+    # Usar el repo proporcionado o el default
+    repo = github_repo or GITHUB_REPO
+
     # Validar que existe el ejecutable
     if not os.path.exists(exe_path):
         print(f"❌ Error: No se encontró el ejecutable en {exe_path}")
         print("   Compila primero con: compile_antarctic.bat")
         return False
-    
+
     # Preparar datos de la release
     tag_name = f"v{version}"
     release_data = {
@@ -59,16 +63,16 @@ def create_github_release(version, token, exe_path, release_notes=""):
         "draft": False,
         "prerelease": False
     }
-    
+
     headers = {
         "Authorization": f"token {token}",
         "Accept": "application/vnd.github.v3+json"
     }
-    
+
     print(f"\n📦 Creando release v{version}...")
-    
+
     # Crear la release
-    api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases"
+    api_url = f"https://api.github.com/repos/{repo}/releases"
     
     try:
         response = requests.post(api_url, headers=headers, json=release_data)
@@ -188,45 +192,44 @@ def main():
         print("   Permisos necesarios: repo (Full control of private repositories)")
         sys.exit(1)
     
-    # Actualizar repo global si se especificó
-    global GITHUB_REPO
-    GITHUB_REPO = args.repo
-    
+    # Usar el repo especificado o el default
+    github_repo = args.repo
+
     # Validar formato de versión
     version = args.version.lstrip('v')
     parts = version.split('.')
-    
+
     if len(parts) != 3 or not all(p.isdigit() for p in parts):
         print("❌ Error: Formato de versión inválido")
         print("   Usa formato semver: X.Y.Z (ej: 1.0.1)")
         sys.exit(1)
-    
+
     print("=" * 60)
     print("ANTARCTIC RELEASE MANAGER")
     print("=" * 60)
     print(f"Versión: v{version}")
-    print(f"Repositorio: {GITHUB_REPO}")
+    print(f"Repositorio: {github_repo}")
     print(f"Ejecutable: {args.exe}")
     print("=" * 60)
-    
+
     # Obtener notas de la release si no se proporcionaron
     release_notes = args.notes
     if not release_notes:
         release_notes = get_release_notes()
-    
+
     # Confirmar
     print(f"\n⚠ ¿Crear release v{version}? (y/n): ", end='')
     confirm = input().lower()
-    
+
     if confirm != 'y':
         print("❌ Cancelado")
         sys.exit(0)
-    
+
     # Actualizar version.txt antes de compilar
     update_version_file(version)
-    
+
     # Crear release
-    success = create_github_release(version, token, args.exe, release_notes)
+    success = create_github_release(version, token, args.exe, release_notes, github_repo)
     
     if success:
         print("\n" + "=" * 60)
