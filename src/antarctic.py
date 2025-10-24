@@ -1120,37 +1120,32 @@ class AutoClicker:
                 else:
                     clicks_to_send = config_clicks
                 
-                # Send the batch of clicks
+                # Determine click multiplier based on click_type
+                click_multiplier = 1
+                if self.config.click_type == 'double':
+                    click_multiplier = 2
+                elif self.config.click_type == 'triple':
+                    click_multiplier = 3
+
+                # Send the batch of clicks (multiplied by click_type)
                 for i in range(clicks_to_send):
                     if not self.running:
                         break
 
-                    # Determine how many clicks to send based on click_type
-                    click_multiplier = 1
-                    if self.config.click_type == 'double':
-                        click_multiplier = 2
-                    elif self.config.click_type == 'triple':
-                        click_multiplier = 3
-
-                    # Send the click(s)
+                    # Send multiple clicks rapidly (for double/triple)
                     for click_num in range(click_multiplier):
                         # Send click down
                         user32.SendMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
-
                         # Send click up
                         user32.SendMessageW(hwnd, self._msg_up, 0, self._lparam_up)
 
-                        # Small delay between double/triple clicks (solo entre clics del mismo grupo)
-                        if click_num < click_multiplier - 1:
-                            time.sleep(0.05)
-
-                    # Apply delay AFTER all clicks in the sequence (not between them)
+                    # Apply delay AFTER all clicks in the sequence
                     if not ultra_mode:
                         delay = self.get_timing_delay()
                         if delay > 0:
                             time.sleep(delay)
 
-                    # Update counters (count as 1 action regardless of click_type)
+                    # Update counters (count actual clicks sent)
                     self.total_clicks_sent += click_multiplier
                     self.current_burst_clicks += click_multiplier
                     click_count += 1
