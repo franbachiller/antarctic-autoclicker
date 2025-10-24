@@ -36,7 +36,10 @@ export default async function handler(req, res) {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { type = 'standard', count = 1, notes = '' } = req.body;
+    const { type, licenseType, count = 1, notes = '' } = req.body;
+
+    // Accept both 'type' and 'licenseType' for compatibility
+    const licenseTypeValue = type || licenseType || 'month';
 
     // Validate count
     if (typeof count !== 'number' || count < 1 || count > 100) {
@@ -47,7 +50,7 @@ export default async function handler(req, res) {
 
     // Validate type
     const validTypes = ['day', 'week', 'month', '3months', '6months', 'year', 'lifetime'];
-    if (!validTypes.includes(type)) {
+    if (!validTypes.includes(licenseTypeValue)) {
       return res.status(400).json({
         error: 'Invalid license type',
         validTypes
@@ -89,13 +92,13 @@ export default async function handler(req, res) {
     const licenses = [];
     for (let i = 0; i < count; i++) {
       const licenseKey = generateLicenseKey();
-      const expiresAt = calculateExpirationDate(type);
+      const expiresAt = calculateExpirationDate(licenseTypeValue);
 
       licenses.push({
         license_key: licenseKey,
-        license_type: type,
+        license_type: licenseTypeValue,
         expires_at: expiresAt,
-        notes: notes || `Generated ${type} license`
+        notes: notes || `Generated ${licenseTypeValue} license`
       });
     }
 
