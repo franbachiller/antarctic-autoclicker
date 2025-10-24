@@ -1,15 +1,29 @@
 #!/usr/bin/env python3
 """
-ANTARCTIC RELEASE MANAGER
-=========================
+ANTARCTIC RELEASE MANAGER - AUTOMATICO
+=======================================
 Script para crear releases automáticamente en GitHub
 
-Uso:
+Este script hace TODO automáticamente:
+  1. Actualiza version.txt
+  2. Compila el ejecutable con PyInstaller
+  3. Crea la release en GitHub
+  4. Sube el .exe a la release
+
+Uso simple:
+    release.bat
+    (Te pedirá la versión y hará todo automáticamente)
+
+Uso avanzado:
     python tools/release.py --version 1.0.1 --token YOUR_GITHUB_TOKEN
-    
+
     O configurar GITHUB_TOKEN como variable de entorno:
     set GITHUB_TOKEN=your_token_here
     python tools/release.py --version 1.0.1
+
+Opciones:
+    --skip-compile    Saltar compilación (si ya compilaste manualmente)
+    --notes "..."     Especificar notas de release directamente
 """
 
 import argparse
@@ -153,10 +167,10 @@ def get_release_notes():
     print("   - Corrección de bug Y")
     print("   - Mejora de rendimiento Z")
     print()
-    
+
     lines = []
     empty_count = 0
-    
+
     while True:
         line = input()
         if not line:
@@ -166,8 +180,45 @@ def get_release_notes():
         else:
             empty_count = 0
             lines.append(line)
-    
+
     return "\n".join(lines)
+
+
+def compile_executable():
+    """Compila el ejecutable usando PyInstaller"""
+    import subprocess
+
+    print("\n🔨 Compilando ejecutable...")
+
+    # Verificar que existe el spec file
+    spec_file = "antarctic.spec"
+    if not os.path.exists(spec_file):
+        print(f"❌ Error: No se encontró {spec_file}")
+        return False
+
+    try:
+        # Ejecutar PyInstaller
+        result = subprocess.run(
+            ["pyinstaller", spec_file, "--clean", "--noconfirm"],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            print("✅ Compilación exitosa!")
+            return True
+        else:
+            print(f"❌ Error en compilación:")
+            print(result.stderr)
+            return False
+
+    except FileNotFoundError:
+        print("❌ Error: PyInstaller no está instalado")
+        print("   Instala con: pip install pyinstaller")
+        return False
+    except Exception as e:
+        print(f"❌ Error al compilar: {e}")
+        return False
 
 
 def main():
@@ -177,6 +228,7 @@ def main():
     parser.add_argument("--notes", help="Notas de la release (opcional)")
     parser.add_argument("--exe", default=EXE_PATH, help=f"Path al ejecutable (default: {EXE_PATH})")
     parser.add_argument("--repo", default=GITHUB_REPO, help=f"Repositorio GitHub (default: {GITHUB_REPO})")
+    parser.add_argument("--skip-compile", action="store_true", help="Saltar compilación automática")
     
     args = parser.parse_args()
     
@@ -225,24 +277,53 @@ def main():
         print("❌ Cancelado")
         sys.exit(0)
 
-    # Actualizar version.txt antes de compilar
+    # Paso 1: Actualizar version.txt
+    print("\n" + "=" * 60)
+    print("PASO 1/3: Actualizando version.txt")
+    print("=" * 60)
     update_version_file(version)
 
-    # Crear release
+    # Paso 2: Compilar ejecutable (si no se saltó)
+    if not args.skip_compile:
+        print("\n" + "=" * 60)
+        print("PASO 2/3: Compilando ejecutable")
+        print("=" * 60)
+        if not compile_executable():
+            print("\n❌ Error: La compilación falló")
+            print("💡 Puedes compilar manualmente con: compile_antarctic.bat")
+            print("   O usar --skip-compile si ya compilaste")
+            sys.exit(1)
+
+        # Verificar que el ejecutable existe
+        if not os.path.exists(args.exe):
+            print(f"\n❌ Error: No se encontró el ejecutable en {args.exe}")
+            sys.exit(1)
+    else:
+        print("\n⏭ Saltando compilación (--skip-compile)")
+        if not os.path.exists(args.exe):
+            print(f"\n❌ Error: No se encontró el ejecutable en {args.exe}")
+            print("   Compila primero con: compile_antarctic.bat")
+            sys.exit(1)
+
+    # Paso 3: Crear release en GitHub
+    print("\n" + "=" * 60)
+    print("PASO 3/3: Creando release en GitHub")
+    print("=" * 60)
     success = create_github_release(version, token, args.exe, release_notes, github_repo)
     
     if success:
         print("\n" + "=" * 60)
-        print("✅ RELEASE COMPLETADA")
+        print("✅ RELEASE COMPLETADA EXITOSAMENTE")
         print("=" * 60)
-        print("\n📋 Próximos pasos:")
-        print("   1. Los usuarios verán la notificación de actualización")
-        print("   2. Pueden actualizar con un click desde la app")
-        print("   3. El .exe se descarga automáticamente desde GitHub")
-        print("\n💡 Para la próxima release:")
-        print(f"   1. Actualiza version.txt a la nueva versión")
-        print(f"   2. Compila: compile_antarctic.bat")
-        print(f"   3. Release: python tools/release.py --version X.Y.Z")
+        print(f"\n🎉 Release v{version} publicada!")
+        print(f"🔗 https://github.com/{github_repo}/releases/tag/v{version}")
+        print("\n📋 ¿Qué pasará ahora?")
+        print("   ✓ Los usuarios verán notificación de actualización")
+        print("   ✓ Pueden actualizar con 1 click desde la app")
+        print("   ✓ El .exe se descarga automáticamente desde GitHub")
+        print("\n💡 Para la próxima release, simplemente ejecuta:")
+        print(f"   release.bat")
+        print(f"   (El script actualiza version.txt, compila y publica automáticamente)")
         sys.exit(0)
     else:
         print("\n❌ Release fallida")
