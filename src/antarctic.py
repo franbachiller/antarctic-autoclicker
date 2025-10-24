@@ -3117,7 +3117,10 @@ class AntarcticGUI(ctk.CTk):
 
         def check_thread():
             try:
+                print(f"[DEBUG UPDATE] Current version: {self.updater.current_version}")
                 has_update, version, url, notes = self.updater.is_update_available()
+                print(f"[DEBUG UPDATE] Latest version: {version}")
+                print(f"[DEBUG UPDATE] Has update: {has_update}")
                 self._safe_after(0, self._on_update_check_complete, has_update, version, url, notes)
             except Exception as e:
                 print(f"Error checking updates: {e}")
