@@ -1161,6 +1161,10 @@ class AutoClicker:
                     if click_count % stats_update_interval == 0 and self.gui_callback:
                         self.gui_callback('stats_update')
 
+                # Small delay between batches to prevent excessive speed
+                if not ultra_mode:
+                    time.sleep(0.001)
+
                 # Update time once per batch instead of every iteration
                 current_time = time.time()
 
