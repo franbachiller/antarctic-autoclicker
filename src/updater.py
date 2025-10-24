@@ -173,31 +173,57 @@ class Updater:
     def _create_update_script(self, current_exe, new_exe):
         """
         Crea un script batch que reemplaza el ejecutable y reinicia la app
-        
+
         Args:
             current_exe: Path del ejecutable actual
             new_exe: Path del nuevo ejecutable
-        
+
         Returns:
             str: Path del script batch
         """
         temp_dir = tempfile.gettempdir()
         script_path = os.path.join(temp_dir, 'antarctic_update.bat')
-        
+
+        # Crear backup del ejecutable actual
+        backup_exe = current_exe + '.backup'
+
         # Script que espera a que se cierre la app, reemplaza el exe y reinicia
         script_content = f'''@echo off
-timeout /t 2 /nobreak >nul
+echo Waiting for Antarctic to close...
+timeout /t 3 /nobreak >nul
+
+REM Kill any remaining processes
 taskkill /F /IM Antarctic.exe >nul 2>&1
-timeout /t 1 /nobreak >nul
-copy /Y "{new_exe}" "{current_exe}" >nul
-del "{new_exe}" >nul
-start "" "{current_exe}"
+timeout /t 2 /nobreak >nul
+
+REM Create backup
+echo Creating backup...
+copy /Y "{current_exe}" "{backup_exe}" >nul
+
+REM Replace with new version
+echo Installing update...
+move /Y "{new_exe}" "{current_exe}"
+
+REM Check if update was successful
+if exist "{current_exe}" (
+    echo Update successful! Starting Antarctic...
+    timeout /t 1 /nobreak >nul
+    start "" "{current_exe}"
+    del "{backup_exe}" >nul 2>&1
+) else (
+    echo Update failed! Restoring backup...
+    move /Y "{backup_exe}" "{current_exe}"
+    start "" "{current_exe}"
+)
+
+REM Clean up
+timeout /t 2 /nobreak >nul
 del "%~f0"
 '''
-        
+
         with open(script_path, 'w') as f:
             f.write(script_content)
-        
+
         return script_path
     
     def check_and_update(self, auto_install=False, progress_callback=None):

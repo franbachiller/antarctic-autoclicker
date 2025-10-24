@@ -3285,11 +3285,12 @@ class AntarcticGUI(ctk.CTk):
                 if update_file:
                     # Apply update
                     if self.updater.apply_update(update_file):
-                        self._safe_after(0, lambda: messagebox.showinfo(
+                        self._safe_after(0, lambda: dialog.destroy())
+                        self._safe_after(100, lambda: messagebox.showinfo(
                             "Update Complete",
-                            "Update downloaded! The application will now restart."
+                            "Update downloaded! The application will close and restart automatically."
                         ))
-                        self._safe_after(100, self.quit)
+                        self._safe_after(500, self.destroy)
                     else:
                         self._safe_after(0, lambda: messagebox.showerror(
                             "Update Failed",
