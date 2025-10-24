@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     }
 
     // Validate type
-    const validTypes = ['week', 'month', '3months', '6months', 'year', 'lifetime', 'standard', 'trial', '1-month', '3-month'];
+    const validTypes = ['day', 'week', 'month', '3months', '6months', 'year', 'lifetime', 'standard', 'trial', '1-month', '3-month'];
     if (!validTypes.includes(type)) {
       return res.status(400).json({
         error: 'Invalid license type',
@@ -67,6 +67,8 @@ export default async function handler(req, res) {
       const day = 24 * 60 * 60 * 1000;
 
       switch(licenseType) {
+        case 'day':
+          return new Date(now + 1 * day);
         case 'week':
           return new Date(now + 7 * day);
         case 'month':

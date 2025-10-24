@@ -114,21 +114,23 @@ def main():
         if choice == "1":
             print("\n--- CREAR LICENCIAS ---")
             print("\nTipos disponibles:")
-            print("  1. week      - 1 semana")
-            print("  2. month     - 1 mes")
-            print("  3. 3months   - 3 meses")
-            print("  4. 6months   - 6 meses")
-            print("  5. year      - 1 año")
-            print("  6. lifetime  - Permanente")
+            print("  1. day       - 1 dia")
+            print("  2. week      - 1 semana")
+            print("  3. month     - 1 mes")
+            print("  4. 3months   - 3 meses")
+            print("  5. 6months   - 6 meses")
+            print("  6. year      - 1 año")
+            print("  7. lifetime  - Permanente")
 
-            type_choice = input("\nSelecciona tipo (1-6): ").strip()
+            type_choice = input("\nSelecciona tipo (1-7): ").strip()
             type_map = {
-                "1": "week",
-                "2": "month",
-                "3": "3months",
-                "4": "6months",
-                "5": "year",
-                "6": "lifetime"
+                "1": "day",
+                "2": "week",
+                "3": "month",
+                "4": "3months",
+                "5": "6months",
+                "6": "year",
+                "7": "lifetime"
             }
 
             license_type = type_map.get(type_choice)
