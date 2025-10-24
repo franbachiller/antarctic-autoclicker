@@ -2,20 +2,18 @@
 # CONFIGURACIÓN DEL AUTO-UPDATER
 # ============================================
 #
-# 1. Cambia esta línea con tu usuario/repo de GitHub:
+# 1. URL de la API de updates (tu servidor Vercel)
+UPDATE_API_URL = "https://antarctic-autoclicker.vercel.app/api/updates"
+#
+# 2. Repositorio de GitHub (para releases internas)
 GITHUB_REPO = "Narfbach/antarctic-autoclicker"
-# Ejemplo: "bachi123/antarctic-autoclicker"
 #
-# 2. Crea un GitHub token en: https://github.com/settings/tokens
-#    Permisos: repo (Full control)
-#
-# 3. Configura el token:
-#    set GITHUB_TOKEN=tu_token_aqui
-#
-# 4. Para crear una release:
+# 3. Para crear una release:
+#    - Actualiza api/updates/latest.js con la nueva versión
+#    - Sube el .exe a tu storage (Dropbox, Google Drive, etc.)
+#    - Actualiza la URL en api/updates/latest.js
 #    - Compila: compile_antarctic.bat
-#    - Release: release.bat
-#    - Ingresa versión (ej: 1.0.1)
+#    - Deploy: git push (Vercel auto-deploys)
 #
 # Los clientes verán la actualización automáticamente!
 

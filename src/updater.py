@@ -1,7 +1,7 @@
 """
 ANTARCTIC AUTO-UPDATER
 ======================
-Sistema de actualización automática usando GitHub Releases
+Sistema de actualización automática usando API propia
 """
 
 import requests
@@ -17,48 +17,42 @@ import hashlib
 # Importar configuración
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from config_updater import GITHUB_REPO
+    from config_updater import UPDATE_API_URL
 except:
-    GITHUB_REPO = "TU_USUARIO/antarctic-autoclicker"
+    UPDATE_API_URL = "https://antarctic-autoclicker.vercel.app/api/updates"
 
 CURRENT_VERSION = "1.0.0"
-UPDATE_CHECK_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 
 class Updater:
-    def __init__(self, current_version=CURRENT_VERSION, github_repo=GITHUB_REPO):
+    def __init__(self, current_version=CURRENT_VERSION, api_url=UPDATE_API_URL):
         self.current_version = current_version
-        self.github_repo = github_repo
-        self.api_url = f"https://api.github.com/repos/{github_repo}/releases/latest"
+        self.api_url = api_url
         
     def get_latest_version(self):
         """
-        Obtiene la última versión disponible en GitHub Releases
-        
+        Obtiene la última versión disponible desde la API
+
         Returns:
             tuple: (version_string, download_url, release_notes) o (None, None, None) si falla
         """
         try:
-            response = requests.get(self.api_url, timeout=10)
+            response = requests.get(f"{self.api_url}/latest", timeout=10)
             response.raise_for_status()
-            
+
             data = response.json()
-            
-            # Obtener versión (tag_name sin 'v' si existe)
-            version = data.get('tag_name', '').lstrip('v')
-            
-            # Obtener URL de descarga del .exe
-            download_url = None
-            for asset in data.get('assets', []):
-                if asset['name'].endswith('.exe'):
-                    download_url = asset['browser_download_url']
-                    break
-            
+
+            # Obtener versión
+            version = data.get('version', '').lstrip('v')
+
+            # Obtener URL de descarga
+            download_url = data.get('download_url')
+
             # Obtener notas de la release
-            release_notes = data.get('body', 'No release notes available')
-            
+            release_notes = data.get('release_notes', 'No release notes available')
+
             return version, download_url, release_notes
-            
+
         except Exception as e:
             print(f"Error checking for updates: {e}")
             return None, None, None

@@ -1701,13 +1701,13 @@ class AntarcticGUI(ctk.CTk):
 
         # Initialize updater
         try:
-            from config_updater import GITHUB_REPO
+            from config_updater import UPDATE_API_URL
         except:
-            GITHUB_REPO = "TU_USUARIO/antarctic-autoclicker"
+            UPDATE_API_URL = "https://antarctic-autoclicker.vercel.app/api/updates"
 
         self.updater = Updater(
             current_version=get_version_from_file(),
-            github_repo=GITHUB_REPO
+            api_url=UPDATE_API_URL
         )
 
         self.setup_ui()
