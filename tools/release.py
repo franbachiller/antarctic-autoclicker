@@ -64,7 +64,7 @@ def create_github_release(version, token, exe_path, release_notes="", github_rep
 
     # Validar que existe el ejecutable
     if not os.path.exists(exe_path):
-        print(f"❌ Error: No se encontró el ejecutable en {exe_path}")
+        print(f"[ERROR] No se encontro el ejecutable en {exe_path}")
         print("   Compila primero con: compile_antarctic.bat")
         return False
 
@@ -83,35 +83,35 @@ def create_github_release(version, token, exe_path, release_notes="", github_rep
         "Accept": "application/vnd.github.v3+json"
     }
 
-    print(f"\n📦 Creando release v{version}...")
+    print(f"\n[*] Creando release v{version}...")
 
     # Crear la release
     api_url = f"https://api.github.com/repos/{repo}/releases"
-    
+
     try:
         response = requests.post(api_url, headers=headers, json=release_data)
         response.raise_for_status()
-        
+
         release = response.json()
         release_id = release['id']
         upload_url = release['upload_url'].split('{')[0]  # Remove template
-        
-        print(f"✓ Release creada: {release['html_url']}")
-        
+
+        print(f"[OK] Release creada: {release['html_url']}")
+
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 422:
-            print(f"❌ Error: La versión {tag_name} ya existe")
-            print("   Usa una versión diferente o elimina la release existente")
+            print(f"[ERROR] La version {tag_name} ya existe")
+            print("   Usa una version diferente o elimina la release existente")
         else:
-            print(f"❌ Error al crear release: {e}")
+            print(f"[ERROR] Error al crear release: {e}")
             print(f"   Response: {e.response.text}")
         return False
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERROR] {e}")
         return False
-    
+
     # Subir el ejecutable
-    print(f"\n📤 Subiendo {os.path.basename(exe_path)}...")
+    print(f"\n[*] Subiendo {os.path.basename(exe_path)}...")
     
     try:
         file_name = os.path.basename(exe_path)
@@ -132,36 +132,36 @@ def create_github_release(version, token, exe_path, release_notes="", github_rep
             )
             upload_response.raise_for_status()
         
-        print(f"✓ Ejecutable subido exitosamente")
-        
+        print(f"[OK] Ejecutable subido exitosamente")
+
     except Exception as e:
-        print(f"❌ Error al subir ejecutable: {e}")
+        print(f"[ERROR] Error al subir ejecutable: {e}")
         return False
-    
-    print(f"\n✅ Release v{version} creada exitosamente!")
-    print(f"🔗 URL: {release['html_url']}")
-    print(f"\n💡 Los usuarios ahora pueden actualizar automáticamente a v{version}")
-    
+
+    print(f"\n[OK] Release v{version} creada exitosamente!")
+    print(f"URL: {release['html_url']}")
+    print(f"\nLos usuarios ahora pueden actualizar automaticamente a v{version}")
+
     return True
 
 
 def update_version_file(version):
     """Actualiza el archivo version.txt en build/obfuscated"""
     version_file = Path("build/obfuscated/version.txt")
-    
+
     try:
         version_file.parent.mkdir(parents=True, exist_ok=True)
         version_file.write_text(version)
-        print(f"✓ Actualizado version.txt a {version}")
+        print(f"[OK] Actualizado version.txt a {version}")
         return True
     except Exception as e:
-        print(f"⚠ Warning: No se pudo actualizar version.txt: {e}")
+        print(f"[WARNING] No se pudo actualizar version.txt: {e}")
         return False
 
 
 def get_release_notes():
     """Solicita las notas de la release al usuario"""
-    print("\n📝 Ingresa las notas de la release (presiona Enter dos veces para terminar):")
+    print("\n[*] Ingresa las notas de la release (presiona Enter dos veces para terminar):")
     print("   Ejemplo:")
     print("   - Nueva funcionalidad X")
     print("   - Corrección de bug Y")
@@ -188,12 +188,12 @@ def compile_executable():
     """Compila el ejecutable usando PyInstaller"""
     import subprocess
 
-    print("\n🔨 Compilando ejecutable...")
+    print("\n[*] Compilando ejecutable...")
 
     # Verificar que existe el spec file
     spec_file = "antarctic.spec"
     if not os.path.exists(spec_file):
-        print(f"❌ Error: No se encontró {spec_file}")
+        print(f"[ERROR] No se encontro {spec_file}")
         return False
 
     try:
@@ -205,19 +205,19 @@ def compile_executable():
         )
 
         if result.returncode == 0:
-            print("✅ Compilación exitosa!")
+            print("[OK] Compilacion exitosa!")
             return True
         else:
-            print(f"❌ Error en compilación:")
+            print(f"[ERROR] Error en compilacion:")
             print(result.stderr)
             return False
 
     except FileNotFoundError:
-        print("❌ Error: PyInstaller no está instalado")
+        print("[ERROR] PyInstaller no esta instalado")
         print("   Instala con: pip install pyinstaller")
         return False
     except Exception as e:
-        print(f"❌ Error al compilar: {e}")
+        print(f"[ERROR] Error al compilar: {e}")
         return False
 
 
@@ -234,16 +234,16 @@ def main():
     
     # Obtener token
     token = args.token or os.environ.get('GITHUB_TOKEN')
-    
+
     if not token:
-        print("❌ Error: Se requiere un GitHub token")
+        print("[ERROR] Se requiere un GitHub token")
         print("\nOpciones:")
         print("  1. Usar --token: python tools/release.py --version 1.0.1 --token YOUR_TOKEN")
         print("  2. Variable de entorno: set GITHUB_TOKEN=YOUR_TOKEN")
-        print("\n💡 Crea un token en: https://github.com/settings/tokens")
+        print("\nCrea un token en: https://github.com/settings/tokens")
         print("   Permisos necesarios: repo (Full control of private repositories)")
         sys.exit(1)
-    
+
     # Usar el repo especificado o el default
     github_repo = args.repo
 
@@ -252,7 +252,7 @@ def main():
     parts = version.split('.')
 
     if len(parts) != 3 or not all(p.isdigit() for p in parts):
-        print("❌ Error: Formato de versión inválido")
+        print("[ERROR] Formato de version invalido")
         print("   Usa formato semver: X.Y.Z (ej: 1.0.1)")
         sys.exit(1)
 
@@ -270,11 +270,11 @@ def main():
         release_notes = get_release_notes()
 
     # Confirmar
-    print(f"\n⚠ ¿Crear release v{version}? (y/n): ", end='')
+    print(f"\n[?] Crear release v{version}? (y/n): ", end='')
     confirm = input().lower()
 
     if confirm != 'y':
-        print("❌ Cancelado")
+        print("[*] Cancelado")
         sys.exit(0)
 
     # Paso 1: Actualizar version.txt
@@ -289,19 +289,19 @@ def main():
         print("PASO 2/3: Compilando ejecutable")
         print("=" * 60)
         if not compile_executable():
-            print("\n❌ Error: La compilación falló")
-            print("💡 Puedes compilar manualmente con: compile_antarctic.bat")
+            print("\n[ERROR] La compilacion fallo")
+            print("Puedes compilar manualmente con: compile_antarctic.bat")
             print("   O usar --skip-compile si ya compilaste")
             sys.exit(1)
 
         # Verificar que el ejecutable existe
         if not os.path.exists(args.exe):
-            print(f"\n❌ Error: No se encontró el ejecutable en {args.exe}")
+            print(f"\n[ERROR] No se encontro el ejecutable en {args.exe}")
             sys.exit(1)
     else:
-        print("\n⏭ Saltando compilación (--skip-compile)")
+        print("\n[*] Saltando compilacion (--skip-compile)")
         if not os.path.exists(args.exe):
-            print(f"\n❌ Error: No se encontró el ejecutable en {args.exe}")
+            print(f"\n[ERROR] No se encontro el ejecutable en {args.exe}")
             print("   Compila primero con: compile_antarctic.bat")
             sys.exit(1)
 
@@ -310,23 +310,23 @@ def main():
     print("PASO 3/3: Creando release en GitHub")
     print("=" * 60)
     success = create_github_release(version, token, args.exe, release_notes, github_repo)
-    
+
     if success:
         print("\n" + "=" * 60)
-        print("✅ RELEASE COMPLETADA EXITOSAMENTE")
+        print("[OK] RELEASE COMPLETADA EXITOSAMENTE")
         print("=" * 60)
-        print(f"\n🎉 Release v{version} publicada!")
-        print(f"🔗 https://github.com/{github_repo}/releases/tag/v{version}")
-        print("\n📋 ¿Qué pasará ahora?")
-        print("   ✓ Los usuarios verán notificación de actualización")
-        print("   ✓ Pueden actualizar con 1 click desde la app")
-        print("   ✓ El .exe se descarga automáticamente desde GitHub")
-        print("\n💡 Para la próxima release, simplemente ejecuta:")
+        print(f"\nRelease v{version} publicada!")
+        print(f"URL: https://github.com/{github_repo}/releases/tag/v{version}")
+        print("\nQue pasara ahora?")
+        print("   - Los usuarios veran notificacion de actualizacion")
+        print("   - Pueden actualizar con 1 click desde la app")
+        print("   - El .exe se descarga automaticamente desde GitHub")
+        print("\nPara la proxima release, simplemente ejecuta:")
         print(f"   release.bat")
-        print(f"   (El script actualiza version.txt, compila y publica automáticamente)")
+        print(f"   (El script actualiza version.txt, compila y publica automaticamente)")
         sys.exit(0)
     else:
-        print("\n❌ Release fallida")
+        print("\n[ERROR] Release fallida")
         sys.exit(1)
 
 
