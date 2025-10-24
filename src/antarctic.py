@@ -777,6 +777,10 @@ class KeyManager:
         """Get time remaining on license"""
         return self.auth_client.get_time_remaining()
 
+    def get_expiration_date(self):
+        """Get expiration date"""
+        return self.auth_client.get_expiration_date()
+
 class AutoClicker:
     def __init__(self, gui_callback=None):
         self.target_x = 0
@@ -2990,20 +2994,21 @@ class AntarcticGUI(ctk.CTk):
             return
 
         try:
-            time_remaining = self.key_manager.get_time_remaining()
-            license_info = self.key_manager.get_license_info()
-            license_type = license_info.get('type', 'Unknown')
+            expiration_date = self.key_manager.get_expiration_date()
 
             # Format the display text
-            if time_remaining == "Lifetime":
-                text = f"License: {license_type} • Lifetime"
-            elif time_remaining == "Expired":
+            if expiration_date == "Lifetime":
+                text = "License: Lifetime"
+                self.license_label.configure(text_color=COLORS['text_secondary'])
+            elif expiration_date == "Expired":
                 text = "License: EXPIRED"
                 self.license_label.configure(text_color=COLORS['accent_red'])
-            elif time_remaining == "Unknown":
-                text = f"License: {license_type}"
+            elif expiration_date == "Unknown":
+                text = "License: Unknown"
+                self.license_label.configure(text_color=COLORS['text_secondary'])
             else:
-                text = f"License: {license_type} • {time_remaining} remaining"
+                text = f"License expires: {expiration_date}"
+                self.license_label.configure(text_color=COLORS['text_secondary'])
 
             self.license_label.configure(text=text)
         except Exception as e:

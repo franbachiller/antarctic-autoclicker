@@ -262,8 +262,8 @@ class AuthClient:
                 if license_exp.tzinfo is None:
                     license_exp = license_exp.replace(tzinfo=timezone.utc)
 
-                # Add a small buffer (5 minutes) to avoid false positives due to clock drift
-                if now >= (license_exp + timedelta(minutes=5)):
+                # Only check if truly expired (no buffer needed here - server handles this)
+                if now >= license_exp:
                     self.clear_session()
                     return False, "License has expired"
 
@@ -278,8 +278,8 @@ class AuthClient:
                     if expires.tzinfo is None:
                         expires = expires.replace(tzinfo=timezone.utc)
 
-                    # Add buffer to avoid false positives
-                    if now < (expires - timedelta(minutes=1)):
+                    # Check if session is still valid
+                    if now < expires:
                         return True, "Valid (offline mode)"
                 return False, "Session expired"
 
@@ -422,6 +422,41 @@ class AuthClient:
                 return f"{hours} hour{'s' if hours > 1 else ''}"
             else:
                 return f"{minutes} minute{'s' if minutes > 1 else ''}"
+
+        except Exception as e:
+            return "Unknown"
+
+    def get_expiration_date(self):
+        """
+        Get formatted expiration date
+
+        Returns:
+            str: Formatted expiration date or status
+        """
+        try:
+            if not self.license_expires:
+                return "Unknown"
+
+            from datetime import timezone
+
+            # Normalize to UTC
+            now = datetime.now(timezone.utc)
+            license_exp = self.license_expires
+
+            # If license_expires is naive, assume it's UTC
+            if license_exp.tzinfo is None:
+                license_exp = license_exp.replace(tzinfo=timezone.utc)
+
+            # Check if expired
+            if now >= license_exp:
+                return "Expired"
+
+            # Check if lifetime (more than 50 years)
+            if (license_exp - now).days > 18250:
+                return "Lifetime"
+
+            # Format date as "DD/MM/YYYY"
+            return license_exp.strftime("%d/%m/%Y")
 
         except Exception as e:
             return "Unknown"
