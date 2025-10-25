@@ -28,10 +28,7 @@ export default async function handler(req, res) {
     // Mapeo de versiones a URLs de descarga
     // IMPORTANTE: Actualiza esto cuando subas una nueva versión
     const downloadUrls = {
-      '1.0.2': process.env.LATEST_EXE_URL || 'https://your-storage-url.com/Antarctic-1.0.2.exe',
-      // Agrega más versiones aquí cuando las subas
-      // '1.0.2': process.env.LATEST_EXE_URL || 'https://drive.google.com/uc?export=download&id=143n0shZzODnmI9OpGNv2FrL9JrG6uO8V',
-      '1.0.3': 'https://your-storage-url.com/Antarctic-1.0.3.exe',
+      '1.0.2': process.env.LATEST_EXE_URL || 'https://drive.google.com/uc?export=download&id=17Ij1zl6Q0UVs4Jhkod3kjfydvO90wsxP',
     };
 
     // Si no se especifica versión, usar la última
