@@ -139,7 +139,7 @@ echo   RELEASE COMPLETADO EXITOSAMENTE!
 echo ============================================
 echo.
 echo Version: %VERSION%
-echo Release: https://github.com/Narfbach/antarctic-autoclicker/releases/tag/v%VERSION%
+echo Release: https://github.com/Narfbach/antarctic-releases/releases/tag/v%VERSION%
 echo.
 echo Los usuarios veran la actualizacion automaticamente.
 echo Vercel desplegara los cambios en unos minutos.
