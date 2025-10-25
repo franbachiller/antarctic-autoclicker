@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 
 # Configuration
-GITHUB_REPO = "Narfbach/antarctic-autoclicker"
+GITHUB_REPO = "Narfbach/antarctic-releases"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
 

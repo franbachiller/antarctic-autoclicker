@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     // Mapeo de versiones a URLs de descarga
     // IMPORTANTE: Actualiza esto cuando subas una nueva versión
     const downloadUrls = {
-      '1.0.0': process.env.LATEST_EXE_URL || 'https://github.com/Narfbach/antarctic-autoclicker/releases/download/v1.0.0/Antarctic.exe',
+      '1.0.0': process.env.LATEST_EXE_URL || 'https://github.com/Narfbach/antarctic-releases/releases/download/v1.0.0/Antarctic.exe',
     };
 
     // Si no se especifica versión, usar la última

@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     // IMPORTANTE: Actualiza estos valores manualmente cuando hagas una nueva release
     const latestVersion = {
       version: '1.0.0',
-      download_url: process.env.LATEST_EXE_URL || 'https://github.com/Narfbach/antarctic-autoclicker/releases/download/v1.0.0/Antarctic.exe',
+      download_url: process.env.LATEST_EXE_URL || 'https://github.com/Narfbach/antarctic-releases/releases/download/v1.0.0/Antarctic.exe',
       release_notes: `
 Initial stable release
       `.trim(),
