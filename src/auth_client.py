@@ -284,19 +284,27 @@ class AuthClient:
 
             # If skip_network is True, just validate locally
             if skip_network:
-                if self.session_token and self.expires_at:
-                    from datetime import timezone
-                    now = datetime.now(timezone.utc)
-                    expires = self.expires_at
+                # If we have a session token, consider it valid for offline mode
+                # (license expiry was already checked above)
+                if self.session_token:
+                    # If expires_at exists, check it
+                    if self.expires_at:
+                        from datetime import timezone
+                        now = datetime.now(timezone.utc)
+                        expires = self.expires_at
 
-                    # If expires_at is naive, assume it's UTC
-                    if expires.tzinfo is None:
-                        expires = expires.replace(tzinfo=timezone.utc)
+                        # If expires_at is naive, assume it's UTC
+                        if expires.tzinfo is None:
+                            expires = expires.replace(tzinfo=timezone.utc)
 
-                    # Check if session is still valid
-                    if now < expires:
-                        return True, "Valid (offline mode)"
-                return False, "Session expired"
+                        # Check if session is still valid
+                        if now < expires:
+                            return True, "Valid (offline mode)"
+                        return False, "Session expired"
+                    else:
+                        # No expires_at means lifetime license - always valid offline
+                        return True, "Valid (offline mode - lifetime)"
+                return False, "No active session"
 
             hwid = self.get_hwid()
 
