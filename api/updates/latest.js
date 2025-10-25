@@ -32,12 +32,12 @@ export default async function handler(req, res) {
     // Información de la última versión
     // IMPORTANTE: Actualiza estos valores manualmente cuando hagas una nueva release
     const latestVersion = {
-      version: '1.0.2',
-      download_url: process.env.LATEST_EXE_URL || 'https://github.com/Narfbach/antarctic-autoclicker/releases/download/v1.0.2/Antarctic.exe',
+      version: '1.0.0',
+      download_url: process.env.LATEST_EXE_URL || 'https://github.com/Narfbach/antarctic-autoclicker/releases/download/v1.0.0/Antarctic.exe',
       release_notes: `
-Bug fixes
+Initial stable release
       `.trim(),
-      released_at: '2025-10-24T21:56:03Z'
+      released_at: new Date().toISOString()
     };
 
     res.json(latestVersion);
