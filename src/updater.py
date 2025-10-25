@@ -104,11 +104,11 @@ class Updater:
     def download_update(self, download_url, progress_callback=None):
         """
         Descarga la actualización
-        
+
         Args:
             download_url: URL del archivo a descargar
             progress_callback: Función callback(bytes_downloaded, total_bytes)
-        
+
         Returns:
             str: Path del archivo descargado o None si falla
         """
@@ -116,27 +116,74 @@ class Updater:
             # Crear directorio temporal
             temp_dir = tempfile.gettempdir()
             temp_file = os.path.join(temp_dir, 'Antarctic_Update.exe')
-            
+
+            print(f"[UPDATE] Downloading from: {download_url}")
+
             # Descargar con progreso
-            response = requests.get(download_url, stream=True, timeout=30)
+            response = requests.get(download_url, stream=True, timeout=30, allow_redirects=True)
             response.raise_for_status()
-            
+
+            # Validate content type - should be binary, not HTML
+            content_type = response.headers.get('content-type', '').lower()
+            print(f"[UPDATE] Content-Type: {content_type}")
+
+            if 'text/html' in content_type or 'text/plain' in content_type:
+                print(f"[UPDATE ERROR] Received HTML/text instead of binary file!")
+                print(f"[UPDATE ERROR] This usually means the download URL is incorrect or requires authentication")
+                print(f"[UPDATE ERROR] Content-Type: {content_type}")
+                return None
+
             total_size = int(response.headers.get('content-length', 0))
+            print(f"[UPDATE] File size: {total_size / (1024*1024):.2f} MB")
+
+            # Minimum expected size (10 MB) - Antarctic.exe should be larger
+            MIN_SIZE = 10 * 1024 * 1024
+            if total_size > 0 and total_size < MIN_SIZE:
+                print(f"[UPDATE ERROR] File too small ({total_size} bytes). Expected at least {MIN_SIZE} bytes")
+                print(f"[UPDATE ERROR] This might be an error page or incorrect file")
+                return None
+
             downloaded = 0
-            
+
             with open(temp_file, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
                         downloaded += len(chunk)
-                        
+
                         if progress_callback:
                             progress_callback(downloaded, total_size)
-            
+
+            # Verify downloaded file
+            actual_size = os.path.getsize(temp_file)
+            print(f"[UPDATE] Downloaded: {actual_size / (1024*1024):.2f} MB")
+
+            # Check if file is actually an executable (starts with MZ header)
+            with open(temp_file, 'rb') as f:
+                header = f.read(2)
+                if header != b'MZ':
+                    print(f"[UPDATE ERROR] Downloaded file is not a valid Windows executable!")
+                    print(f"[UPDATE ERROR] File header: {header}")
+                    print(f"[UPDATE ERROR] This is likely an HTML error page or wrong file")
+                    # Read first 500 bytes to see what it is
+                    f.seek(0)
+                    preview = f.read(500)
+                    print(f"[UPDATE ERROR] File preview: {preview[:200]}")
+                    os.remove(temp_file)
+                    return None
+
+            if total_size > 0 and actual_size != total_size:
+                print(f"[UPDATE ERROR] Incomplete download! Expected {total_size}, got {actual_size}")
+                os.remove(temp_file)
+                return None
+
+            print(f"[UPDATE] Download successful: {temp_file}")
             return temp_file
-            
+
         except Exception as e:
-            print(f"Error downloading update: {e}")
+            print(f"[UPDATE ERROR] Error downloading update: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def apply_update(self, update_file):

@@ -1,6 +1,12 @@
 @echo off
-REM Configurar token de GitHub
-set GITHUB_TOKEN=GITHUB_TOKEN_REMOVED
+REM Configurar token de GitHub desde variable de entorno
+REM Configura GITHUB_TOKEN en tu sistema o crea un archivo .env
+if "%GITHUB_TOKEN%"=="" (
+    echo ERROR: GITHUB_TOKEN no configurado
+    echo Configura la variable de entorno GITHUB_TOKEN con tu Personal Access Token
+    pause
+    exit /b 1
+)
 
 echo ============================================
 echo ANTARCTIC - RELEASE MANAGER AUTOMATICO

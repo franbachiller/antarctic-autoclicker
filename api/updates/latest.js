@@ -33,15 +33,11 @@ export default async function handler(req, res) {
     // IMPORTANTE: Actualiza estos valores manualmente cuando hagas una nueva release
     const latestVersion = {
       version: '1.0.2',
-      download_url: process.env.LATEST_EXE_URL || 'https://drive.google.com/uc?export=download&id=17Ij1zl6Q0UVs4Jhkod3kjfydvO90wsxP',
+      download_url: process.env.LATEST_EXE_URL || 'https://github.com/Narfbach/antarctic-autoclicker/releases/download/v1.0.2/Antarctic.exe',
       release_notes: `
-- Fix click speed and performance
-- Fix license validation system
-- Add 1 day license option
-- Optimize autoclicker performance
-- Fix update system with proper backup and file handling
+Bug fixes
       `.trim(),
-      released_at: '2025-01-15T10:00:00Z'
+      released_at: '2025-10-24T21:56:03Z'
     };
 
     res.json(latestVersion);
