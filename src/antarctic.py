@@ -182,80 +182,30 @@ class INPUT(ctypes.Structure):
 
 class ClickConfig:
     def __init__(self):
-        self.clicks = 24
-        self.interval = 10
-        self.duration = 0.30
-        self.click_type = 'single'
+        # Configuracion principal del autoclicker
+        self.clicks = 24  # Limitador: Clics a realizar
+        self.interval = 10  # Intervalo: Tiempo entre cada clic (en ms)
+        self.multiplier = 1  # Multiplicador: Cantidad de clics por grupo
+        self.delay = 0  # Delay: Retraso inicial (en ms)
+        
+        # Configuraciones internas necesarias
         self.mouse_button = 'left'
-        self.humanize_enabled = False
-        self.time_jitter_ms = 2.0
-        self.humanize_advanced = False
-        self.click_mode = 'normal'
-        self.hold_duration_ms = 100
-        self.drag_offset_x = 0
-        self.drag_offset_y = 0
         self.input_method = 'postmessage'
-        self.timing_profile = 'precise'
         self.ultra_mode = False
         self.auto_burst_enabled = False
-        self.auto_burst_delay = 0.0
-
-        # Advanced timing system (for burst variations)
-        self.advanced_timing_enabled: bool = False
-        self.advanced_profile: AdvancedTimingProfile | None = None
-        self.event_sequence: ClickEventSequence | None = None
-        self.delay_pattern: DelayPatternEngine | None = None
-
-        # New advanced timing systems
-        self.markov_chain_enabled = False
-        self.gaussian_delay_enabled = False
-        self.acceleration_enabled = False
-
-        # Markov Chain parameters
-        self.markov_fast_multiplier = 0.5
-        self.markov_medium_multiplier = 1.0
-        self.markov_slow_multiplier = 1.8
-
-        # Gaussian delay parameters
-        self.gaussian_mean_ms = 10.0
-        self.gaussian_std_dev_ms = 3.0
-        self.gaussian_min_delay_ms = 1.0
-        self.gaussian_use_absolute = False
-
-        # Acceleration profile parameters
-        self.accel_curve_type = 'linear'  # 'linear', 'exponential', 's_curve', 'custom'
-        self.accel_start_multiplier = 1.0
-        self.accel_end_multiplier = 0.5
-        self.accel_duration_clicks = 50
-        self.accel_duration_type = 'clicks'  # 'clicks' or 'time'
-
-        # Latency compensation parameters
-        self.latency_compensation_enabled = False
-        self.latency_devtools_port = 9222
-        self.latency_multiplier = 1.0
+        self.click_mode = 'normal'
 
     def to_dict(self):
         data = {}
         for k, v in self.__dict__.items():
-            # Skip None values for advanced profiles
-            if v is None:
-                continue
-            # Handle special objects
-            if hasattr(v, 'to_dict'):
-                data[k] = v.to_dict()
-            else:
-                data[k] = v
+            data[k] = v
         return data
 
     def from_dict(self, data):
         for key, value in data.items():
             if hasattr(self, key):
                 # Type conversion for boolean fields
-                boolean_fields = [
-                    'advanced_timing_enabled', 'humanize_enabled', 'humanize_advanced',
-                    'ultra_mode', 'auto_burst_enabled', 'markov_chain_enabled',
-                    'gaussian_delay_enabled', 'acceleration_enabled', 'gaussian_use_absolute'
-                ]
+                boolean_fields = ['ultra_mode', 'auto_burst_enabled']
                 if key in boolean_fields:
                     value = bool(value)
                 setattr(self, key, value)
@@ -881,97 +831,11 @@ class AutoClicker:
             self.last_delay_ms = 0.0
             return 0
 
-        # Start with the interval slider value (in milliseconds, convert to seconds)
+        # Intervalo: Tiempo entre cada clic (en ms, convertir a segundos)
         base_delay = self.config.interval / 1000.0
 
-        # Apply latency compensation FIRST (if enabled)
-        original_delay = base_delay
-        if self.config.latency_compensation_enabled and self.latency_compensator.compensation_enabled:
-            base_delay_ms = base_delay * 1000.0
-            compensated_ms = self.latency_compensator.get_compensated_delay(base_delay_ms)
-            base_delay = compensated_ms / 1000.0
-
-            # Log compensation (only occasionally to avoid spam)
-            if random.random() < 0.01:  # 1% of the time
-                print(f"[LATENCY] Original: {original_delay*1000:.2f}ms → Compensated: {base_delay*1000:.2f}ms (RTT: {self.latency_compensator.current_rtt_ms:.1f}ms)")
-
-        # Apply humanization if enabled
-        if self.config.humanize_enabled:
-            if self.config.timing_profile == 'human_slow':
-                # Add random delay on top of base
-                base_delay += random.uniform(0.010, 0.025)
-            elif self.config.timing_profile == 'human_fast':
-                # Add smaller random delay
-                base_delay += random.uniform(0.002, 0.008)
-            elif self.config.timing_profile == 'random':
-                # Random multiplier
-                base_delay *= random.uniform(0.5, 2.0)
-
-            # Apply time jitter if configured
-            if self.config.time_jitter_ms > 0:
-                jitter = random.uniform(-self.config.time_jitter_ms, self.config.time_jitter_ms) / 1000.0
-                base_delay += jitter
-
-        # Apply advanced timing modifications if enabled
-        if self.config.advanced_timing_enabled and self.config.advanced_profile:
-            profile = self.config.advanced_profile
-
-            # Apply micro-jitter for race conditions (additive)
-            if profile.jitter_range:
-                jitter = random.uniform(profile.jitter_range[0], profile.jitter_range[1])
-                base_delay += jitter
-
-        # === NEW ADVANCED TIMING SYSTEMS ===
-
-        # 1. Apply Markov Chain Timing (state-based transitions)
-        if self.config.markov_chain_enabled:
-            # Sync config parameters to engine
-            self.markov_chain.enabled = True
-            self.markov_chain.use_custom_multipliers = True
-            self.markov_chain.custom_fast_multiplier = self.config.markov_fast_multiplier
-            self.markov_chain.custom_medium_multiplier = self.config.markov_medium_multiplier
-            self.markov_chain.custom_slow_multiplier = self.config.markov_slow_multiplier
-
-            base_delay = self.markov_chain.apply_to_delay(base_delay)
-            self.last_markov_state = self.markov_chain.current_state
-        else:
-            self.markov_chain.enabled = False
-            self.last_markov_state = "off"
-
-        # 2. Apply Gaussian Distribution Delays
-        if self.config.gaussian_delay_enabled:
-            # Sync config parameters to engine
-            self.gaussian_delay.enabled = True
-            self.gaussian_delay.mean_ms = self.config.gaussian_mean_ms
-            self.gaussian_delay.std_dev_ms = self.config.gaussian_std_dev_ms
-            self.gaussian_delay.min_delay_ms = self.config.gaussian_min_delay_ms
-            self.gaussian_delay.use_absolute = self.config.gaussian_use_absolute
-
-            before_gaussian = base_delay
-            base_delay = self.gaussian_delay.apply_to_delay(base_delay)
-            self.last_gaussian_value = base_delay - before_gaussian
-        else:
-            self.gaussian_delay.enabled = False
-            self.last_gaussian_value = 0.0
-
-        # 3. Apply Acceleration/Deceleration Profile
-        if self.config.acceleration_enabled:
-            # Sync config parameters to engine
-            self.acceleration_profile.enabled = True
-            self.acceleration_profile.curve_type = self.config.accel_curve_type
-            self.acceleration_profile.start_speed_multiplier = self.config.accel_start_multiplier
-            self.acceleration_profile.end_speed_multiplier = self.config.accel_end_multiplier
-            self.acceleration_profile.duration_clicks = self.config.accel_duration_clicks
-            self.acceleration_profile.duration_type = self.config.accel_duration_type
-
-            base_delay = self.acceleration_profile.apply_to_delay(base_delay)
-            self.last_accel_progress = self.acceleration_profile.get_progress()
-        else:
-            self.acceleration_profile.enabled = False
-            self.last_accel_progress = 0.0
-
-        # Ensure minimum delay and store for monitoring
-        final_delay = max(0.001, base_delay)
+        # Asegurar delay minimo y almacenar para monitoreo
+        final_delay = max(0.0001, base_delay)  # Minimo 0.1ms
         self.last_delay_ms = final_delay * 1000.0
 
         return final_delay
@@ -1072,111 +936,75 @@ class AutoClicker:
     def is_key_pressed(self, vk_code):
         return user32.GetAsyncKeyState(vk_code) & 0x8000 != 0
 
-    def execute_burst(self, delay=None):
+    def execute_burst(self, initial_delay=None):
         if not self.is_connected or not self.target_hwnd or not self.target_x or not self.target_y:
             return
 
-        if delay is not None and delay > 0:
-            time.sleep(delay)
+        # Aplicar delay inicial si se especifica
+        if initial_delay is not None and initial_delay > 0:
+            time.sleep(initial_delay / 1000.0)  # Convertir ms a segundos
 
         with self.burst_lock:
             self.active_bursts += 1
             if self.active_bursts == 1 and self.gui_callback:
                 self.gui_callback('burst_started')
 
-        # Reset acceleration profile for new burst
-        if self.config.acceleration_enabled:
-            self.acceleration_profile.reset()
-
-        # Apply advanced threading optimizations - always use ABOVE_NORMAL for better performance
-        if self.config.advanced_timing_enabled and self.config.advanced_profile:
-            self.threading_optimizer.optimize_for_race_conditions(self.config.advanced_profile)
-        else:
-            current_thread = kernel32.GetCurrentThread()
-            priority = THREAD_PRIORITY_BELOW_NORMAL if self.config.ultra_mode else THREAD_PRIORITY_ABOVE_NORMAL
-            kernel32.SetThreadPriority(current_thread, priority)
+        # Optimizacion de threading
+        current_thread = kernel32.GetCurrentThread()
+        priority = THREAD_PRIORITY_BELOW_NORMAL if self.config.ultra_mode else THREAD_PRIORITY_ABOVE_NORMAL
+        kernel32.SetThreadPriority(current_thread, priority)
 
         try:
-            end_time = time.time() + self.config.duration
-            click_count = 0
             client_x, client_y = self.screen_to_client(self.target_hwnd, self.target_x, self.target_y)
             self._precalculate_click_params(client_x, client_y)
             ultra_mode = self.config.ultra_mode
-            humanize = self.config.humanize_advanced
-            stats_update_interval = 100  # Reduced GUI updates for better performance
             hwnd = self.target_hwnd
 
             if not self.check_window_valid(hwnd):
                 return
 
-            # Execute burst with timing system
-            config_clicks = self.config.clicks
+            # Configuracion de burst
+            total_clicks_limit = self.config.clicks  # Limitador: Total de clics a enviar
+            multiplier = self.config.multiplier  # Multiplicador: Clics por grupo (antes del intervalo)
+            clicks_sent = 0  # Contador de clics enviados
+            stats_update_interval = 10
 
-            # Determine click multiplier once (optimization)
-            click_multiplier = 1
-            if self.config.click_type == 'double':
-                click_multiplier = 2
-            elif self.config.click_type == 'triple':
-                click_multiplier = 3
-
-            # Cache timing values for performance
-            current_time = time.time()
-
-            while current_time < end_time and self.running:
-                # Determine clicks per batch
-                if humanize:
-                    clicks_to_send = random.randint(5, 15)
-                elif self.config.advanced_timing_enabled and self.config.advanced_profile:
-                    # Use burst pattern from advanced profile
-                    profile = self.config.advanced_profile
-                    pattern_index = click_count % len(profile.burst_pattern)
-                    clicks_to_send = profile.burst_pattern[pattern_index]
-                else:
-                    clicks_to_send = config_clicks
-
-                # Send the batch of clicks (multiplied by click_type)
-                for i in range(clicks_to_send):
+            # Ejecutar burst hasta alcanzar el limite de clics
+            while clicks_sent < total_clicks_limit and self.running:
+                # Determinar cuantos clics enviar en este grupo
+                clicks_in_group = min(multiplier, total_clicks_limit - clicks_sent)
+                
+                # Enviar el grupo de clics
+                for i in range(clicks_in_group):
                     if not self.running:
                         break
 
-                    # Send multiple clicks rapidly (for double/triple)
-                    for click_num in range(click_multiplier):
-                        # Send click down
-                        user32.SendMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
-                        # Send click up
-                        user32.SendMessageW(hwnd, self._msg_up, 0, self._lparam_up)
+                    # Enviar clic down
+                    user32.SendMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
+                    # Enviar clic up
+                    user32.SendMessageW(hwnd, self._msg_up, 0, self._lparam_up)
 
-                    # Apply delay AFTER all clicks in the sequence
-                    if not ultra_mode:
-                        delay = self.get_timing_delay()
-                        if delay > 0:
-                            time.sleep(delay)
+                    # Actualizar contadores
+                    self.total_clicks_sent += 1
+                    self.current_burst_clicks += 1
+                    clicks_sent += 1
 
-                    # Update counters (count actual clicks sent)
-                    self.total_clicks_sent += click_multiplier
-                    self.current_burst_clicks += click_multiplier
-                    click_count += 1
+                # Aplicar delay entre grupos solo si no hemos terminado
+                if clicks_sent < total_clicks_limit and not ultra_mode:
+                    delay = self.get_timing_delay()
+                    if delay > 0:
+                        time.sleep(delay)
 
-                    # Update stats periodically (less frequent for better performance)
-                    if click_count % stats_update_interval == 0 and self.gui_callback:
-                        self.gui_callback('stats_update')
-
-                # Small delay between batches to prevent excessive speed
-                if not ultra_mode:
-                    time.sleep(0.001)
-
-                # Update time once per batch instead of every iteration
-                current_time = time.time()
+                # Actualizar stats periodicamente
+                if clicks_sent % stats_update_interval == 0 and self.gui_callback:
+                    self.gui_callback('stats_update')
 
             if self.gui_callback:
                 self.gui_callback('stats_update')
         finally:
-            # Restore normal priority
-            if self.config.advanced_timing_enabled and self.config.advanced_profile:
-                self.threading_optimizer.restore_normal_priority()
-            else:
-                current_thread = kernel32.GetCurrentThread()
-                kernel32.SetThreadPriority(current_thread, THREAD_PRIORITY_NORMAL)
+            # Restaurar prioridad normal
+            current_thread = kernel32.GetCurrentThread()
+            kernel32.SetThreadPriority(current_thread, THREAD_PRIORITY_NORMAL)
 
             with self.burst_lock:
                 self.active_bursts -= 1
@@ -1225,7 +1053,7 @@ class AutoClicker:
                     if not lbutton_pressed:
                         burst_thread = threading.Thread(
                             target=self.execute_burst,
-                            args=(self.config.auto_burst_delay,),
+                            args=(self.config.delay,),
                             daemon=True
                         )
                         burst_thread.start()
@@ -1680,7 +1508,7 @@ class AntarcticGUI(ctk.CTk):
     def __init__(self, key_manager):
         super().__init__()
         self.title("ANTARCTIC")
-        self.geometry("400x670")  # Compact initial size (all sections closed)
+        self.geometry("400x620")  # Tamaño con sliders siempre visibles
         self.resizable(False, False)
 
         # Set window icon
@@ -1829,17 +1657,8 @@ class AntarcticGUI(ctk.CTk):
         # Collapsible sliders section (CLOSED by default)
         self.create_collapsible_sliders(controls_frame)
 
-        # Quick settings row (always visible)
-        self.create_quick_settings(controls_frame)
-
         # Profile management (always visible)
         self.create_profile_section(controls_frame)
-
-        # Advanced timing controls (collapsible, closed by default)
-        self.create_advanced_timing_section(controls_frame)
-
-        # Latency compensation (collapsible, closed by default) - with spacing
-        self.create_latency_section(controls_frame)
 
     def create_advanced_timing_section(self, parent):
         """Advanced timing controls - compact section"""
@@ -2196,7 +2015,7 @@ class AntarcticGUI(ctk.CTk):
             btn.pack(side="left", padx=3)
 
     def create_collapsible_sliders(self, parent):
-        """Collapsible sliders section (closed by default)"""
+        """Settings section with numeric inputs"""
         # Main container
         self.sliders_section = ctk.CTkFrame(
             parent,
@@ -2207,7 +2026,7 @@ class AntarcticGUI(ctk.CTk):
         )
         self.sliders_section.pack(fill="x", pady=(0, 8))
 
-        # Header with toggle button
+        # Header
         header_frame = ctk.CTkFrame(self.sliders_section, fg_color="transparent", height=36)
         header_frame.pack(fill="x", padx=12, pady=8)
         header_frame.pack_propagate(False)
@@ -2230,77 +2049,161 @@ class AntarcticGUI(ctk.CTk):
             height=16
         )
         help_label.pack(side="left", padx=(4, 0))
-        ToolTip(help_label, "Clicks, Speed, Duration y Delay del autoclicker")
+        ToolTip(help_label, "Limitador, Intervalo, Multiplicador y Delay del autoclicker")
 
-        # Toggle button
-        self.sliders_toggle_btn = ctk.CTkButton(
-            header_frame,
-            text="▼",
-            width=30,
-            height=24,
-            font=("Segoe UI", 12),
-            fg_color=COLORS['bg_secondary'],
-            hover_color=COLORS['bg_primary'],
-            text_color=COLORS['text_secondary'],
-            corner_radius=6,
-            command=self.toggle_sliders_section
-        )
-        self.sliders_toggle_btn.pack(side="right")
-
-        # Content frame (hidden by default)
+        # Content frame
         self.sliders_content = ctk.CTkFrame(self.sliders_section, fg_color="transparent")
-        # Don't pack it - it's hidden by default
+        self.sliders_content.pack(fill="x", padx=12, pady=(0, 12))
 
-        # Create sliders inside content frame
-        self.clicks_slider, self.clicks_label = self.create_aero_slider(
-            self.sliders_content, "Clicks", 1, 100, 24,
-            lambda v: setattr(self.clicker.config, 'clicks', int(v))
+        # Create numeric inputs
+        self.clicks_entry = self.create_numeric_input(
+            self.sliders_content, "Limitador (Clics)", 24, 1, 1000,
+            lambda v: self.update_config('clicks', v, int)
         )
-        self.interval_slider, self.interval_label = self.create_aero_slider(
-            self.sliders_content, "Speed", 1, 200, 10,
-            lambda v: setattr(self.clicker.config, 'interval', int(v))
+        self.interval_entry = self.create_numeric_input(
+            self.sliders_content, "Intervalo (ms)", 10, 0.1, 1000,
+            lambda v: self.update_config('interval', v, float)
         )
-        self.duration_slider, self.duration_label = self.create_aero_slider(
-            self.sliders_content, "Duration", 0.01, 2.0, 0.30,
-            lambda v: setattr(self.clicker.config, 'duration', float(v))
+        self.multiplier_entry = self.create_numeric_input(
+            self.sliders_content, "Multiplicador", 1, 1, 100,
+            lambda v: self.update_config('multiplier', v, int)
         )
-        self.delay_slider, self.delay_label = self.create_aero_slider(
-            self.sliders_content, "Delay", 0.0, 1.0, 0.0,
-            lambda v: setattr(self.clicker.config, 'auto_burst_delay', float(v))
+        self.delay_entry = self.create_numeric_input(
+            self.sliders_content, "Delay (ms)", 0, 0, 100,
+            lambda v: self.update_config('delay', v, int)
         )
 
-        # Track state
-        self.sliders_section_open = False
+    def create_numeric_input(self, parent, label_text, default_value, min_val, max_val, callback):
+        """Create a numeric input with +/- buttons"""
+        container = ctk.CTkFrame(parent, fg_color="transparent")
+        container.pack(fill="x", pady=6)
+        
+        # Label
+        label_frame = ctk.CTkFrame(container, fg_color="transparent")
+        label_frame.pack(side="left", fill="x", expand=True)
+        
+        ctk.CTkLabel(
+            label_frame,
+            text=label_text,
+            font=("Segoe UI", 10, "bold"),
+            text_color=COLORS['text_primary'],
+            anchor="w"
+        ).pack(side="left")
+        
+        # Control frame (entry + buttons)
+        control_frame = ctk.CTkFrame(container, fg_color="transparent")
+        control_frame.pack(side="right")
+        
+        # Decrease button
+        decrease_btn = ctk.CTkButton(
+            control_frame,
+            text="-",
+            width=32,
+            height=32,
+            font=("Segoe UI", 16, "bold"),
+            fg_color=COLORS['bg_secondary'],
+            hover_color=COLORS['accent_blue'],
+            text_color=COLORS['text_primary'],
+            corner_radius=8,
+            command=lambda: self.adjust_numeric_value(entry, -1, min_val, max_val, callback, isinstance(default_value, float))
+        )
+        decrease_btn.pack(side="left", padx=(0, 4))
+        
+        # Entry field
+        entry = ctk.CTkEntry(
+            control_frame,
+            width=80,
+            height=32,
+            font=("Segoe UI", 12, "bold"),
+            fg_color=COLORS['bg_primary'],
+            border_color=COLORS['accent_blue'],
+            border_width=2,
+            text_color=COLORS['text_primary'],
+            justify="center"
+        )
+        entry.pack(side="left", padx=4)
+        entry.insert(0, str(default_value))
+        
+        # Bind events
+        entry.bind("<Return>", lambda e: self.validate_numeric_input(entry, min_val, max_val, callback, isinstance(default_value, float)))
+        entry.bind("<FocusOut>", lambda e: self.validate_numeric_input(entry, min_val, max_val, callback, isinstance(default_value, float)))
+        
+        # Increase button
+        increase_btn = ctk.CTkButton(
+            control_frame,
+            text="+",
+            width=32,
+            height=32,
+            font=("Segoe UI", 16, "bold"),
+            fg_color=COLORS['bg_secondary'],
+            hover_color=COLORS['accent_blue'],
+            text_color=COLORS['text_primary'],
+            corner_radius=8,
+            command=lambda: self.adjust_numeric_value(entry, 1, min_val, max_val, callback, isinstance(default_value, float))
+        )
+        increase_btn.pack(side="left", padx=(4, 0))
+        
+        return entry
+    
+    def adjust_numeric_value(self, entry, delta, min_val, max_val, callback, is_float):
+        """Adjust numeric value by delta"""
+        try:
+            current = float(entry.get()) if is_float else int(entry.get())
+            
+            # Determine step size
+            if is_float:
+                step = 0.1 if current < 10 else 1.0
+            else:
+                step = 1
+            
+            new_value = current + (delta * step)
+            new_value = max(min_val, min(max_val, new_value))
+            
+            if is_float:
+                entry.delete(0, "end")
+                entry.insert(0, f"{new_value:.1f}")
+            else:
+                entry.delete(0, "end")
+                entry.insert(0, str(int(new_value)))
+            
+            callback(new_value)
+        except ValueError:
+            pass
+    
+    def validate_numeric_input(self, entry, min_val, max_val, callback, is_float):
+        """Validate and apply numeric input"""
+        try:
+            value = float(entry.get()) if is_float else int(entry.get())
+            value = max(min_val, min(max_val, value))
+            
+            if is_float:
+                entry.delete(0, "end")
+                entry.insert(0, f"{value:.1f}")
+            else:
+                entry.delete(0, "end")
+                entry.insert(0, str(int(value)))
+            
+            callback(value)
+        except ValueError:
+            # Reset to current config value
+            if is_float:
+                entry.delete(0, "end")
+                entry.insert(0, f"{min_val:.1f}")
+            else:
+                entry.delete(0, "end")
+                entry.insert(0, str(int(min_val)))
+    
+    def update_config(self, attr, value, type_conv):
+        """Update config attribute with type conversion"""
+        setattr(self.clicker.config, attr, type_conv(value))
 
     def resize_window(self):
         """Dynamically resize window based on open sections"""
-        base_height = 670  # Base height with all sections closed
-
-        # Add height for each open section
-        if self.sliders_section_open:
-            base_height += 200  # Basic settings section height
-
-        if hasattr(self, 'latency_expanded') and self.latency_expanded:
-            base_height += 190  # Latency section height
-
+        base_height = 620
         self.geometry(f"400x{base_height}")
 
     def toggle_sliders_section(self):
-        """Toggle sliders section visibility and resize window"""
-        if self.sliders_section_open:
-            # Close section
-            self.sliders_content.pack_forget()
-            self.sliders_toggle_btn.configure(text="▼")
-            self.sliders_section_open = False
-            # Shrink window
-            self.resize_window()
-        else:
-            # Open section
-            self.sliders_content.pack(fill="x", padx=0, pady=(0, 8))
-            self.sliders_toggle_btn.configure(text="▲")
-            self.sliders_section_open = True
-            # Expand window
-            self.resize_window()
+        pass
 
     def create_aero_slider(self, parent, label, from_, to, initial, command):
         """Frutiger Aero styled compact slider"""
@@ -2579,7 +2482,7 @@ class AntarcticGUI(ctk.CTk):
         self.update_license_display()
 
     def toggle_humanization(self):
-        self.clicker.config.humanize_enabled = bool(self.humanize_checkbox.get())
+        pass
 
 
 
@@ -2588,48 +2491,16 @@ class AntarcticGUI(ctk.CTk):
         self.sync_auto_burst_state()
 
     def toggle_advanced_timing(self):
-        """Toggle burst variations mode - simplified auto-selection"""
-        try:
-            # Get the desired state from checkbox
-            desired_state = bool(self.advanced_checkbox.get())
-
-            # Update config
-            self.clicker.config.advanced_timing_enabled = desired_state
-
-            # Auto-select the best profile when enabled
-            if desired_state:
-                # Automatically select "Timing Critical" as the best profile
-                self.clicker.config.advanced_profile = self.clicker.advanced_profiles['timing_critical']
-            else:
-                # Clear profile when disabled
-                self.clicker.config.advanced_profile = None
-
-        except Exception as e:
-            print(f"Error in toggle_advanced_timing: {e}")
-            # Reset to safe state
-            self.clicker.config.advanced_timing_enabled = False
-            self.clicker.config.advanced_profile = None
-            if hasattr(self, 'advanced_checkbox'):
-                self.advanced_checkbox.deselect()
-
-    # load_advanced_profile method removed - no longer needed with simplified UI
-
-    # update_burst_variations_ui method removed - no longer needed with simplified UI
+        pass
 
     def toggle_markov_chain(self):
-        """Toggle Markov Chain timing system"""
-        self.clicker.config.markov_chain_enabled = bool(self.markov_checkbox.get())
+        pass
 
     def toggle_gaussian(self):
-        """Toggle Gaussian delay system"""
-        self.clicker.config.gaussian_delay_enabled = bool(self.gaussian_checkbox.get())
+        pass
 
     def toggle_acceleration(self):
-        """Toggle acceleration profile system"""
-        self.clicker.config.acceleration_enabled = bool(self.accel_checkbox.get())
-        # Reset acceleration profile when enabled
-        if self.clicker.config.acceleration_enabled:
-            self.clicker.acceleration_profile.reset()
+        pass
 
     def toggle_latency_section(self):
         """Expande/colapsa la sección de latency"""
@@ -2679,15 +2550,7 @@ class AntarcticGUI(ctk.CTk):
         messagebox.showerror("Error", "No se pudo detectar el puerto DevTools.\nAsegúrate de que el launcher esté configurado correctamente.")
 
     def toggle_latency_compensation(self):
-        """Toggle latency compensation"""
-        enabled = self.latency_enabled_var.get()
-        self.clicker.config.latency_compensation_enabled = enabled
-        self.clicker.latency_compensator.enable_compensation(enabled)
-
-        if enabled:
-            self.latency_active_label.configure(text="✓ COMPENSATING", text_color=COLORS['accent_green'])
-        else:
-            self.latency_active_label.configure(text="")
+        pass
 
     def connect_latency_system(self):
         """Conecta al sistema de latencia del juego"""
@@ -2854,6 +2717,10 @@ class AntarcticGUI(ctk.CTk):
 
     def update_timing_monitor(self):
         """Update the timing monitor with real-time values"""
+        # Skip if timing monitor doesn't exist
+        if not hasattr(self, 'timing_monitor_label'):
+            return
+            
         if self.clicker.active_bursts == 0:
             self.timing_monitor_label.configure(text="Monitor: Ready")
             return
@@ -2864,26 +2731,7 @@ class AntarcticGUI(ctk.CTk):
         # Show current delay
         parts.append(f"Delay:{self.clicker.last_delay_ms:.1f}ms")
 
-        # Show latency compensation if enabled
-        if self.clicker.config.latency_compensation_enabled and self.clicker.latency_compensator.compensation_enabled:
-            rtt = self.clicker.latency_compensator.current_rtt_ms
-            if rtt > 0:
-                parts.append(f"🌐-{rtt/2:.0f}ms")
-
-        # Show Markov state if enabled
-        if self.clicker.config.markov_chain_enabled:
-            state_colors = {'fast': '🟢', 'medium': '🟡', 'slow': '🔴'}
-            icon = state_colors.get(self.clicker.last_markov_state, '⚪')
-            parts.append(f"M:{icon}")
-
-        # Show Gaussian if enabled
-        if self.clicker.config.gaussian_delay_enabled:
-            parts.append(f"G:±{abs(self.clicker.last_gaussian_value*1000):.1f}")
-
-        # Show Acceleration progress if enabled
-        if self.clicker.config.acceleration_enabled:
-            progress_pct = int(self.clicker.last_accel_progress * 100)
-            parts.append(f"A:{progress_pct}%")
+        # Mostrar informacion basica del timing
 
         monitor_text = " | ".join(parts)
         self.timing_monitor_label.configure(text=monitor_text)
@@ -2946,40 +2794,18 @@ class AntarcticGUI(ctk.CTk):
 
     def sync_ui_with_config(self):
         """Sync UI elements with current config"""
-        self.clicks_slider.set(self.clicker.config.clicks)
-        self.interval_slider.set(self.clicker.config.interval)
-        self.duration_slider.set(self.clicker.config.duration)
-        self.delay_slider.set(self.clicker.config.auto_burst_delay)
+        # Update numeric inputs
+        self.clicks_entry.delete(0, "end")
+        self.clicks_entry.insert(0, str(self.clicker.config.clicks))
         
-        self.update_aero_slider(self.clicks_label, self.clicker.config.clicks, lambda v: setattr(self.clicker.config, 'clicks', int(v)), False)
-        self.update_aero_slider(self.interval_label, self.clicker.config.interval, lambda v: setattr(self.clicker.config, 'interval', int(v)), False)
-        self.update_aero_slider(self.duration_label, self.clicker.config.duration, lambda v: setattr(self.clicker.config, 'duration', float(v)), True)
-        self.update_aero_slider(self.delay_label, self.clicker.config.auto_burst_delay, lambda v: setattr(self.clicker.config, 'auto_burst_delay', float(v)), True)
+        self.interval_entry.delete(0, "end")
+        self.interval_entry.insert(0, f"{self.clicker.config.interval:.1f}")
         
-        self.type_selector.set(self.clicker.config.click_type.capitalize())
-        btn_map = {'left': 'Left', 'right': 'Right', 'middle': 'Mid'}
-        self.button_selector.set(btn_map.get(self.clicker.config.mouse_button, 'Left'))
+        self.multiplier_entry.delete(0, "end")
+        self.multiplier_entry.insert(0, str(self.clicker.config.multiplier))
         
-        if self.clicker.config.humanize_enabled:
-            self.humanize_checkbox.select()
-        else:
-            self.humanize_checkbox.deselect()
-
-        # Sync new advanced timing checkboxes
-        if self.clicker.config.markov_chain_enabled:
-            self.markov_checkbox.select()
-        else:
-            self.markov_checkbox.deselect()
-
-        if self.clicker.config.gaussian_delay_enabled:
-            self.gaussian_checkbox.select()
-        else:
-            self.gaussian_checkbox.deselect()
-
-        if self.clicker.config.acceleration_enabled:
-            self.accel_checkbox.select()
-        else:
-            self.accel_checkbox.deselect()
+        self.delay_entry.delete(0, "end")
+        self.delay_entry.insert(0, str(self.clicker.config.delay))
 
         self.sync_auto_burst_state()
 
