@@ -2069,7 +2069,7 @@ class AntarcticGUI(ctk.CTk):
             lambda v: self.update_config('multiplier', v, int)
         )
         self.delay_entry = self.create_numeric_input(
-            self.sliders_content, "Delay (ms)", 0, 0, 100,
+            self.sliders_content, "Delay (ms)", 0, 0, 300,
             lambda v: self.update_config('delay', v, int)
         )
 
