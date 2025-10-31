@@ -956,68 +956,84 @@ class AutoClicker:
         kernel32.SetThreadPriority(current_thread, priority)
 
         try:
+            # === MINIMIZAR SYSTEM CALLS: Pre-cachear todo antes del loop ===
+            
+            # Cachear posiciones y ventana
             client_x, client_y = self.screen_to_client(self.target_hwnd, self.target_x, self.target_y)
             self._precalculate_click_params(client_x, client_y)
+            
+            # Cachear configuracion en variables locales (evita acceso a atributos)
             ultra_mode = self.config.ultra_mode
             hwnd = self.target_hwnd
-
+            total_clicks_limit = self.config.clicks
+            
+            # Verificar ventana UNA SOLA VEZ (no en cada iteracion)
             if not self.check_window_valid(hwnd):
                 return
 
+            # Pre-cachear mensajes de Windows (evita lookups repetidos)
+            msg_down = self._msg_down
+            msg_up = self._msg_up
+            wparam = self._wparam
+            lparam = self._lparam
+            lparam_up = self._lparam_up
+            
+            # Cachear funciones (evita lookups de metodos)
+            send_message = user32.SendMessageW
+            sleep = time.sleep
+            get_delay = self.get_timing_delay
+            
             # Configuracion de burst
-            total_clicks_limit = self.config.clicks  # Limitador: Total de clics a enviar
-            clicks_sent = 0  # Contador de clics enviados
+            clicks_sent = 0
             stats_update_interval = 10
             
-            # Determinar patron de clics a usar
+            # Determinar patron de clics y pre-cachearlo
             click_pattern = []
             if self.config.click_pattern and self.config.click_pattern.strip():
-                # Usar patron personalizado
                 try:
                     click_pattern = [int(x.strip()) for x in self.config.click_pattern.split(',') if x.strip()]
                 except:
                     click_pattern = []
             
-            # Si no hay patron valido, usar multiplicador
             if not click_pattern:
                 click_pattern = [self.config.multiplier]
             
+            pattern_len = len(click_pattern)
             pattern_index = 0
 
-            # Ejecutar burst hasta alcanzar el limite de clics
+            # === LOOP OPTIMIZADO: Solo llamadas estrictamente necesarias ===
             while clicks_sent < total_clicks_limit and self.running:
-                # Determinar cuantos clics enviar en este grupo (segun el patron)
-                clicks_in_group = click_pattern[pattern_index % len(click_pattern)]
+                # Determinar cuantos clics enviar en este grupo
+                clicks_in_group = click_pattern[pattern_index % pattern_len]
                 clicks_in_group = min(clicks_in_group, total_clicks_limit - clicks_sent)
                 
-                # Enviar el grupo de clics
+                # Enviar el grupo de clics (minimas system calls)
                 for i in range(clicks_in_group):
                     if not self.running:
                         break
 
-                    # Enviar clic down
-                    user32.SendMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
-                    # Enviar clic up
-                    user32.SendMessageW(hwnd, self._msg_up, 0, self._lparam_up)
+                    # System calls minimas: solo enviar mensajes
+                    send_message(hwnd, msg_down, wparam, lparam)
+                    send_message(hwnd, msg_up, 0, lparam_up)
 
-                    # Actualizar contadores
+                    # Actualizar contadores (sin system calls)
                     self.total_clicks_sent += 1
                     self.current_burst_clicks += 1
                     clicks_sent += 1
 
-                # Avanzar al siguiente elemento del patron
                 pattern_index += 1
 
-                # Aplicar delay entre grupos solo si no hemos terminado
+                # Delay entre grupos (solo si es necesario)
                 if clicks_sent < total_clicks_limit and not ultra_mode:
-                    delay = self.get_timing_delay()
+                    delay = get_delay()
                     if delay > 0:
-                        time.sleep(delay)
+                        sleep(delay)
 
-                # Actualizar stats periodicamente
+                # Stats update (reducido, evita spam de callbacks)
                 if clicks_sent % stats_update_interval == 0 and self.gui_callback:
                     self.gui_callback('stats_update')
 
+            # Stats final
             if self.gui_callback:
                 self.gui_callback('stats_update')
         finally:
