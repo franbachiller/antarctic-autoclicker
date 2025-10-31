@@ -13,9 +13,8 @@ echo ANTARCTIC - RELEASE MANAGER AUTOMATICO
 echo ============================================
 echo.
 echo Este script hara TODO automaticamente:
-echo   1. Actualizar version.txt
-echo   2. Compilar el ejecutable
-echo   3. Crear release en GitHub
+echo   1. Compilar el ejecutable
+echo   2. Crear release en GitHub
 echo.
 
 REM Solicitar version

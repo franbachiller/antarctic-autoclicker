@@ -15,7 +15,6 @@ from PIL import Image
 from auth_client import AuthClient
 from security import SecurityGuard
 from latency_compensator import LatencyCompensator
-from updater import Updater, get_version_from_file
 
 # GUI Configuration - Frutiger Aero Style
 ctk.set_appearance_mode("dark")
@@ -1562,27 +1561,12 @@ class AntarcticGUI(ctk.CTk):
         self._is_closing = False  # Flag to prevent callbacks after close
         self.license_label = None  # Will be created in create_footer
 
-        # Initialize updater
-        try:
-            from config_updater import UPDATE_API_URL
-        except:
-            UPDATE_API_URL = "https://antarctic-autoclicker.vercel.app/api/updates"
-
-        self.updater = Updater(
-            current_version=get_version_from_file(),
-            api_url=UPDATE_API_URL
-        )
-
         self.setup_ui()
         self.clicker.start()
         self.load_last_profile()
 
         # Start background license validation (every 5 minutes)
         self.start_license_validation()
-
-        # Check for updates on startup (after 3 seconds)
-        after_id = self.after(3000, self.check_for_updates)
-        self._after_ids.append(after_id)
 
     def setup_ui(self):
         self.configure(fg_color=COLORS['bg_primary'])
@@ -2562,8 +2546,8 @@ class AntarcticGUI(ctk.CTk):
         self.autoburst_button.pack(fill="x")
 
     def create_footer(self, parent):
-        """Footer with version and license info"""
-        footer = ctk.CTkFrame(parent, fg_color="transparent", height=65)
+        """Footer with license info"""
+        footer = ctk.CTkFrame(parent, fg_color="transparent", height=40)
         footer.pack(fill="x", padx=12, pady=(0, 10))
         footer.pack_propagate(False)
 
@@ -2575,34 +2559,6 @@ class AntarcticGUI(ctk.CTk):
             text_color=COLORS['text_secondary']
         )
         self.license_label.pack(side="bottom", pady=(4, 0))
-
-        # Version and update button
-        version_frame = ctk.CTkFrame(footer, fg_color="transparent")
-        version_frame.pack(side="bottom", pady=(0, 4))
-
-        self.version_label = ctk.CTkLabel(
-            version_frame,
-            text=f"v{self.updater.current_version}",
-            font=("Segoe UI", 11, "bold"),
-            text_color=COLORS['text_primary']
-        )
-        self.version_label.pack(side="left", padx=(0, 10))
-
-        self.update_btn = ctk.CTkButton(
-            version_frame,
-            text="Check Updates",
-            width=120,
-            height=28,
-            font=("Segoe UI", 10),
-            fg_color=COLORS['bg_card'],
-            hover_color=COLORS['accent_blue'],
-            text_color=COLORS['text_primary'],
-            border_width=2,
-            border_color=COLORS['accent_blue'],
-            corner_radius=8,
-            command=self.check_for_updates
-        )
-        self.update_btn.pack(side="left")
 
         # Update license info
         self.update_license_display()
@@ -3063,211 +3019,6 @@ class AntarcticGUI(ctk.CTk):
             except:
                 pass
             sys.exit(0)
-
-    def check_for_updates(self):
-        """Check for updates in background thread"""
-        if self._is_closing:
-            return
-
-        self.update_btn.configure(text="Checking...", state="disabled")
-
-        def check_thread():
-            try:
-                print(f"[DEBUG UPDATE] Current version: {self.updater.current_version}")
-                has_update, version, url, notes = self.updater.is_update_available()
-                print(f"[DEBUG UPDATE] Latest version: {version}")
-                print(f"[DEBUG UPDATE] Has update: {has_update}")
-                self._safe_after(0, self._on_update_check_complete, has_update, version, url, notes)
-            except Exception as e:
-                print(f"Error checking updates: {e}")
-                self._safe_after(0, self._on_update_check_failed)
-
-        threading.Thread(target=check_thread, daemon=True).start()
-
-    def _on_update_check_complete(self, has_update, version, url, notes):
-        """Handle update check completion"""
-        if self._is_closing:
-            return
-
-        self.update_btn.configure(text="Check Updates", state="normal")
-
-        if has_update:
-            self.show_update_dialog(version, url, notes)
-        else:
-            messagebox.showinfo(
-                "No Updates",
-                f"You're running the latest version (v{self.updater.current_version})"
-            )
-
-    def _on_update_check_failed(self):
-        """Handle update check failure"""
-        if self._is_closing:
-            return
-
-        self.update_btn.configure(text="Check Updates", state="normal")
-        messagebox.showerror(
-            "Update Check Failed",
-            "Could not check for updates. Please try again later."
-        )
-
-    def show_update_dialog(self, version, url, notes):
-        """Show update available dialog"""
-        if self._is_closing:
-            return
-
-        # Create custom dialog
-        dialog = ctk.CTkToplevel(self)
-        dialog.title("Update Available")
-        dialog.geometry("450x450")
-        dialog.resizable(False, False)
-        dialog.configure(fg_color=COLORS['bg_primary'])
-
-        # Center dialog
-        dialog.update_idletasks()
-        x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
-        y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
-        dialog.geometry(f'+{x}+{y}')
-
-        # Make modal
-        dialog.transient(self)
-        dialog.grab_set()
-
-        # Header
-        header = ctk.CTkLabel(
-            dialog,
-            text=f"New Version Available: v{version}",
-            font=("Segoe UI", 16, "bold"),
-            text_color=COLORS['accent_cyan']
-        )
-        header.pack(pady=(20, 10))
-
-        # Current version
-        current = ctk.CTkLabel(
-            dialog,
-            text=f"Current: v{self.updater.current_version}",
-            font=("Segoe UI", 11),
-            text_color=COLORS['text_secondary']
-        )
-        current.pack(pady=(0, 15))
-
-        # Release notes
-        notes_label = ctk.CTkLabel(
-            dialog,
-            text="What's New:",
-            font=("Segoe UI", 12, "bold"),
-            text_color=COLORS['text_primary']
-        )
-        notes_label.pack(pady=(0, 5))
-
-        notes_frame = ctk.CTkFrame(
-            dialog,
-            fg_color=COLORS['bg_card'],
-            corner_radius=8,
-            border_width=1,
-            border_color=COLORS['border']
-        )
-        notes_frame.pack(fill="both", expand=True, padx=20, pady=(0, 15))
-
-        notes_text = ctk.CTkTextbox(
-            notes_frame,
-            font=("Segoe UI", 10),
-            fg_color=COLORS['bg_card'],
-            text_color=COLORS['text_primary'],
-            wrap="word",
-            activate_scrollbars=True
-        )
-        notes_text.pack(fill="both", expand=True, padx=5, pady=5)
-        notes_text.insert("1.0", notes)
-        notes_text.configure(state="disabled")
-
-        # Progress bar (hidden initially)
-        self.update_progress = ctk.CTkProgressBar(
-            dialog,
-            width=400,
-            height=8,
-            fg_color=COLORS['bg_card'],
-            progress_color=COLORS['accent_cyan']
-        )
-        self.update_progress.set(0)
-
-        # Buttons
-        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
-        btn_frame.pack(pady=(0, 20))
-
-        def start_update():
-            update_btn.configure(state="disabled", text="Downloading...")
-            later_btn.configure(state="disabled")
-            self.update_progress.pack(padx=20, pady=(0, 10))
-            self.download_and_install_update(url, dialog)
-
-        update_btn = ctk.CTkButton(
-            btn_frame,
-            text="Update Now",
-            width=140,
-            height=35,
-            font=("Segoe UI", 12, "bold"),
-            fg_color=COLORS['accent_blue'],
-            hover_color=COLORS['accent_cyan'],
-            command=start_update
-        )
-        update_btn.pack(side="left", padx=5)
-
-        later_btn = ctk.CTkButton(
-            btn_frame,
-            text="Later",
-            width=140,
-            height=35,
-            font=("Segoe UI", 12),
-            fg_color=COLORS['bg_card'],
-            hover_color=COLORS['border'],
-            border_width=1,
-            border_color=COLORS['border'],
-            command=dialog.destroy
-        )
-        later_btn.pack(side="left", padx=5)
-
-    def download_and_install_update(self, url, dialog):
-        """Download and install update"""
-        def progress_callback(downloaded, total):
-            if total > 0:
-                progress = downloaded / total
-                self._safe_after(0, lambda: self.update_progress.set(progress))
-
-        def download_thread():
-            try:
-                # Download
-                update_file = self.updater.download_update(url, progress_callback)
-
-                if update_file:
-                    # Apply update
-                    if self.updater.apply_update(update_file):
-                        self._safe_after(0, lambda: dialog.destroy())
-                        self._safe_after(100, lambda: messagebox.showinfo(
-                            "Update Complete",
-                            "Update downloaded! The application will close and restart automatically."
-                        ))
-                        self._safe_after(500, self.destroy)
-                    else:
-                        self._safe_after(0, lambda: messagebox.showerror(
-                            "Update Failed",
-                            "Failed to apply update. Please try again."
-                        ))
-                        self._safe_after(0, dialog.destroy)
-                else:
-                    self._safe_after(0, lambda: messagebox.showerror(
-                        "Download Failed",
-                        "Failed to download update. Please try again."
-                    ))
-                    self._safe_after(0, dialog.destroy)
-            except Exception as e:
-                print(f"Update error: {e}")
-                self._safe_after(0, lambda: messagebox.showerror(
-                    "Update Error",
-                    f"An error occurred: {str(e)}"
-                ))
-                self._safe_after(0, dialog.destroy)
-
-        threading.Thread(target=download_thread, daemon=True).start()
 
     def on_close(self):
         self._is_closing = True

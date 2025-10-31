@@ -10,9 +10,7 @@ Antarctic/
 │   ├── antarctic.py             # Aplicación principal con GUI
 │   ├── auth_client.py           # Cliente de autenticación de licencias
 │   ├── latency_compensator.py   # Sistema de compensación de latencia
-│   ├── security.py              # Módulo de seguridad
-│   ├── updater.py               # Sistema de actualizaciones automáticas
-│   └── version.txt              # Versión actual
+│   └── security.py              # Módulo de seguridad
 │
 ├── api/                          # 🌐 Backend de validación (Vercel)
 │   ├── activate.js              # Endpoint de activación
@@ -23,11 +21,8 @@ Antarctic/
 │   │   ├── delete-license.js    # Eliminar licencia
 │   │   ├── ban-license.js       # Banear licencia
 │   │   └── stats.js             # Estadísticas
-│   ├── middleware/
-│   │   └── rate-limit.js        # Rate limiting
-│   └── updates/
-│       ├── latest.js            # Info de última versión
-│       └── download.js          # Descarga de actualizaciones
+│   └── middleware/
+│       └── rate-limit.js        # Rate limiting
 │
 ├── admin-panel/                  # 🔐 Panel web de administración
 │   ├── admin.html
@@ -58,7 +53,6 @@ Antarctic/
 ├── clean_project.bat             # Limpiar archivos temporales
 ├── auto_release.bat              # Release automatizado
 ├── release.bat                   # Release manual
-├── config_updater.py             # Configuración de URLs
 ├── package.json                  # Dependencias de Node.js
 ├── vercel.json                   # Configuración de Vercel
 └── set_env.bat                   # Variables de entorno (no en git)
@@ -115,13 +109,6 @@ El sistema usa Supabase para validación de licencias en tiempo real:
 - **Offline mode**: Modo de gracia de 1 hora sin conexión
 - **Tipos de licencia**: 1 día, 7 días, 30 días, lifetime
 
-## 🔄 Sistema de Actualizaciones
-
-- Verificación automática en startup
-- Descarga y instalación automática
-- Backup automático antes de actualizar
-- GitHub Releases como fuente
-
 ## 🎮 Características
 
 - ✅ Sistema de clics configurable (single/double/triple)
@@ -153,8 +140,7 @@ El script `compile_antarctic.bat` realiza:
 
 2. **Preparación de archivos**:
    - Copia assets (iconos, logos)
-   - Copia módulos auxiliares (updater, latency_compensator)
-   - Copia version.txt
+   - Copia módulos auxiliares (latency_compensator)
 
 3. **Compilación con PyInstaller**:
    - Genera ejecutable único (`--onefile`)

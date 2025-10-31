@@ -4,11 +4,10 @@ ANTARCTIC RELEASE MANAGER - AUTOMATICO
 =======================================
 Script para crear releases automáticamente en GitHub
 
-Este script hace TODO automáticamente:
-  1. Actualiza version.txt
-  2. Compila el ejecutable con PyInstaller
-  3. Crea la release en GitHub
-  4. Sube el .exe a la release
+Este script hace:
+  1. Compila el ejecutable con PyInstaller
+  2. Crea la release en GitHub
+  3. Sube el .exe a la release
 
 Uso simple:
     release.bat
@@ -33,14 +32,8 @@ import requests
 import json
 from pathlib import Path
 
-# Importar configuración
-try:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from config_updater import GITHUB_REPO as DEFAULT_GITHUB_REPO
-except:
-    DEFAULT_GITHUB_REPO = "Narfbach/antarctic-releases"
-
-GITHUB_REPO = DEFAULT_GITHUB_REPO
+# Configuración
+GITHUB_REPO = "Narfbach/antarctic-releases"
 EXE_PATH = "dist/Antarctic.exe"
 
 
@@ -143,20 +136,6 @@ def create_github_release(version, token, exe_path, release_notes="", github_rep
     print(f"\nLos usuarios ahora pueden actualizar automaticamente a v{version}")
 
     return True
-
-
-def update_version_file(version):
-    """Actualiza el archivo version.txt en build/obfuscated"""
-    version_file = Path("build/obfuscated/version.txt")
-
-    try:
-        version_file.parent.mkdir(parents=True, exist_ok=True)
-        version_file.write_text(version)
-        print(f"[OK] Actualizado version.txt a {version}")
-        return True
-    except Exception as e:
-        print(f"[WARNING] No se pudo actualizar version.txt: {e}")
-        return False
 
 
 def get_release_notes():
@@ -277,16 +256,10 @@ def main():
         print("[*] Cancelado")
         sys.exit(0)
 
-    # Paso 1: Actualizar version.txt
-    print("\n" + "=" * 60)
-    print("PASO 1/3: Actualizando version.txt")
-    print("=" * 60)
-    update_version_file(version)
-
-    # Paso 2: Compilar ejecutable (si no se saltó)
+    # Paso 1: Compilar ejecutable (si no se saltó)
     if not args.skip_compile:
         print("\n" + "=" * 60)
-        print("PASO 2/3: Compilando ejecutable")
+        print("PASO 1/2: Compilando ejecutable")
         print("=" * 60)
         if not compile_executable():
             print("\n[ERROR] La compilacion fallo")
@@ -305,9 +278,9 @@ def main():
             print("   Compila primero con: compile_antarctic.bat")
             sys.exit(1)
 
-    # Paso 3: Crear release en GitHub
+    # Paso 2: Crear release en GitHub
     print("\n" + "=" * 60)
-    print("PASO 3/3: Creando release en GitHub")
+    print("PASO 2/2: Creando release en GitHub")
     print("=" * 60)
     success = create_github_release(version, token, args.exe, release_notes, github_repo)
 
@@ -317,13 +290,8 @@ def main():
         print("=" * 60)
         print(f"\nRelease v{version} publicada!")
         print(f"URL: https://github.com/{github_repo}/releases/tag/v{version}")
-        print("\nQue pasara ahora?")
-        print("   - Los usuarios veran notificacion de actualizacion")
-        print("   - Pueden actualizar con 1 click desde la app")
-        print("   - El .exe se descarga automaticamente desde GitHub")
         print("\nPara la proxima release, simplemente ejecuta:")
         print(f"   release.bat")
-        print(f"   (El script actualiza version.txt, compila y publica automaticamente)")
         sys.exit(0)
     else:
         print("\n[ERROR] Release fallida")

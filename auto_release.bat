@@ -8,8 +8,7 @@ REM   1. Configura variables de entorno
 REM   2. Solicita version
 REM   3. Compila el ejecutable
 REM   4. Crea release en GitHub
-REM   5. Actualiza API de updates
-REM   6. Commit y push automatico
+REM   5. Commit y push automatico
 REM
 REM Solo abre este archivo y sigue las instrucciones!
 REM ============================================
@@ -73,14 +72,8 @@ if "%NOTES%"=="" (
 echo      OK - Notas: %NOTES%
 echo.
 
-REM Actualizar version.txt
-echo [4/7] Actualizando version.txt...
-echo %VERSION% > src\version.txt
-echo      OK - version.txt actualizado
-echo.
-
 REM Compilar ejecutable
-echo [5/7] Compilando ejecutable...
+echo [4/6] Compilando ejecutable...
 echo      Esto puede tardar 1-2 minutos...
 cd build
 call compile.bat >nul 2>&1
@@ -97,7 +90,7 @@ echo      OK - Ejecutable compilado
 echo.
 
 REM Crear release en GitHub
-echo [6/7] Creando release en GitHub...
+echo [5/6] Creando release en GitHub...
 python tools\release.py --version %VERSION% --notes "%NOTES%" --skip-compile
 
 if %ERRORLEVEL% NEQ 0 (
@@ -109,22 +102,9 @@ if %ERRORLEVEL% NEQ 0 (
 echo      OK - Release creada en GitHub
 echo.
 
-REM Actualizar API de updates
-echo [7/7] Actualizando API de updates...
-python tools\migrate_to_github_releases.py
-
-if %ERRORLEVEL% NEQ 0 (
-    echo      ERROR: Fallo al actualizar API
-    pause
-    exit /b 1
-)
-
-echo      OK - API actualizada
-echo.
-
 REM Commit y push
-echo [8/8] Haciendo commit y push...
-git add api/updates/ src/version.txt
+echo [6/6] Haciendo commit y push...
+git add .
 git commit -m "Release version %VERSION%"
 git push origin main
 
@@ -140,9 +120,6 @@ echo ============================================
 echo.
 echo Version: %VERSION%
 echo Release: https://github.com/Narfbach/antarctic-releases/releases/tag/v%VERSION%
-echo.
-echo Los usuarios veran la actualizacion automaticamente.
-echo Vercel desplegara los cambios en unos minutos.
 echo.
 pause
 
