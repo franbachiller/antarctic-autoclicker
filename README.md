@@ -134,10 +134,44 @@ El sistema usa Supabase para validación de licencias en tiempo real:
 
 ## 📦 Compilación
 
-El script `compile_antarctic.bat` hace:
-1. Ofusca el código con PyArmor
-2. Compila con PyInstaller
-3. Genera `dist/Antarctic.exe`
+### Compilar el proyecto
+```bash
+# Opción 1: Script rápido (recomendado)
+compile_antarctic.bat
+
+# Opción 2: Compilar manualmente desde build/
+cd build
+compile.bat
+```
+
+### Proceso de compilación
+El script `compile_antarctic.bat` realiza:
+1. **Ofuscación con PyArmor** (Nivel 5/5):
+   - `auth_client.py` → Ofuscado (protección de licencias)
+   - `security.py` → Ofuscado (anti-debugging)
+   - `antarctic.py` → Sin ofuscar (demasiado grande para PyArmor trial)
+
+2. **Preparación de archivos**:
+   - Copia assets (iconos, logos)
+   - Copia módulos auxiliares (updater, latency_compensator)
+   - Copia version.txt
+
+3. **Compilación con PyInstaller**:
+   - Genera ejecutable único (`--onefile`)
+   - Modo ventana (`--windowed`)
+   - Icono personalizado
+   - Runtime de PyArmor incluido
+
+4. **Resultado**:
+   - Ejecutable: `dist/Antarctic.exe`
+   - Tamaño: ~34 MB
+   - Protección máxima implementada
+
+### Limpiar archivos temporales de compilación
+```bash
+cd build
+clean.bat
+```
 
 ## 🌐 Deploy
 
