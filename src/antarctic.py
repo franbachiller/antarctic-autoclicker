@@ -187,6 +187,7 @@ class ClickConfig:
         self.interval = 10  # Intervalo: Tiempo entre cada clic (en ms)
         self.multiplier = 1  # Multiplicador: Cantidad de clics por grupo
         self.delay = 0  # Delay: Retraso inicial (en ms)
+        self.click_pattern = ""  # Patron de clics (ej: "3,2,1") - opcional
         
         # Configuraciones internas necesarias
         self.mouse_button = 'left'
@@ -965,14 +966,29 @@ class AutoClicker:
 
             # Configuracion de burst
             total_clicks_limit = self.config.clicks  # Limitador: Total de clics a enviar
-            multiplier = self.config.multiplier  # Multiplicador: Clics por grupo (antes del intervalo)
             clicks_sent = 0  # Contador de clics enviados
             stats_update_interval = 10
+            
+            # Determinar patron de clics a usar
+            click_pattern = []
+            if self.config.click_pattern and self.config.click_pattern.strip():
+                # Usar patron personalizado
+                try:
+                    click_pattern = [int(x.strip()) for x in self.config.click_pattern.split(',') if x.strip()]
+                except:
+                    click_pattern = []
+            
+            # Si no hay patron valido, usar multiplicador
+            if not click_pattern:
+                click_pattern = [self.config.multiplier]
+            
+            pattern_index = 0
 
             # Ejecutar burst hasta alcanzar el limite de clics
             while clicks_sent < total_clicks_limit and self.running:
-                # Determinar cuantos clics enviar en este grupo
-                clicks_in_group = min(multiplier, total_clicks_limit - clicks_sent)
+                # Determinar cuantos clics enviar en este grupo (segun el patron)
+                clicks_in_group = click_pattern[pattern_index % len(click_pattern)]
+                clicks_in_group = min(clicks_in_group, total_clicks_limit - clicks_sent)
                 
                 # Enviar el grupo de clics
                 for i in range(clicks_in_group):
@@ -988,6 +1004,9 @@ class AutoClicker:
                     self.total_clicks_sent += 1
                     self.current_burst_clicks += 1
                     clicks_sent += 1
+
+                # Avanzar al siguiente elemento del patron
+                pattern_index += 1
 
                 # Aplicar delay entre grupos solo si no hemos terminado
                 if clicks_sent < total_clicks_limit and not ultra_mode:
@@ -1508,7 +1527,7 @@ class AntarcticGUI(ctk.CTk):
     def __init__(self, key_manager):
         super().__init__()
         self.title("ANTARCTIC")
-        self.geometry("400x620")  # Tamaño con sliders siempre visibles
+        self.geometry("400x660")  # Tamaño con sliders siempre visibles + patron
         self.resizable(False, False)
 
         # Set window icon
@@ -2072,6 +2091,11 @@ class AntarcticGUI(ctk.CTk):
             self.sliders_content, "Delay (ms)", 0, 0, 300,
             lambda v: self.update_config('delay', v, int)
         )
+        
+        # Patron de clics (opcional)
+        self.pattern_entry = self.create_pattern_input(
+            self.sliders_content, "Patrón (opcional)", ""
+        )
 
     def create_numeric_input(self, parent, label_text, default_value, min_val, max_val, callback):
         """Create a numeric input with +/- buttons"""
@@ -2193,13 +2217,99 @@ class AntarcticGUI(ctk.CTk):
                 entry.delete(0, "end")
                 entry.insert(0, str(int(min_val)))
     
+    def create_pattern_input(self, parent, label_text, default_value):
+        """Create a text input for click pattern"""
+        container = ctk.CTkFrame(parent, fg_color="transparent")
+        container.pack(fill="x", pady=6)
+        
+        # Label with help icon
+        label_frame = ctk.CTkFrame(container, fg_color="transparent")
+        label_frame.pack(side="left", fill="x", expand=True)
+        
+        ctk.CTkLabel(
+            label_frame,
+            text=label_text,
+            font=("Segoe UI", 10, "bold"),
+            text_color=COLORS['text_primary'],
+            anchor="w"
+        ).pack(side="left")
+        
+        # Help icon
+        help_icon = ctk.CTkLabel(
+            label_frame,
+            text="?",
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim'],
+            width=14
+        )
+        help_icon.pack(side="left", padx=(4, 0))
+        ToolTip(help_icon, "Patrón de clics: ej. '3,2,1' = 3 clics, pausa, 2 clics, pausa, 1 clic.\nSi está vacío, usa el Multiplicador normal.")
+        
+        # Entry field
+        entry = ctk.CTkEntry(
+            container,
+            width=150,
+            height=32,
+            font=("Segoe UI", 11),
+            fg_color=COLORS['bg_primary'],
+            border_color=COLORS['accent_blue'],
+            border_width=2,
+            text_color=COLORS['text_primary'],
+            placeholder_text="ej: 3,2,1",
+            justify="center"
+        )
+        entry.pack(side="right")
+        entry.insert(0, default_value)
+        
+        # Bind events
+        entry.bind("<Return>", lambda e: self.validate_pattern_input(entry))
+        entry.bind("<FocusOut>", lambda e: self.validate_pattern_input(entry))
+        
+        return entry
+    
+    def validate_pattern_input(self, entry):
+        """Validate and apply pattern input"""
+        pattern = entry.get().strip()
+        
+        # Empty is valid (uses multiplier instead)
+        if not pattern:
+            self.clicker.config.click_pattern = ""
+            return
+        
+        # Validate format: only numbers and commas
+        import re
+        if not re.match(r'^[\d,\s]+$', pattern):
+            entry.delete(0, "end")
+            entry.insert(0, "")
+            self.clicker.config.click_pattern = ""
+            return
+        
+        # Parse and validate numbers
+        try:
+            numbers = [int(x.strip()) for x in pattern.split(',') if x.strip()]
+            if not numbers or any(n <= 0 for n in numbers):
+                entry.delete(0, "end")
+                entry.insert(0, "")
+                self.clicker.config.click_pattern = ""
+                return
+            
+            # Valid pattern
+            clean_pattern = ','.join(map(str, numbers))
+            entry.delete(0, "end")
+            entry.insert(0, clean_pattern)
+            self.clicker.config.click_pattern = clean_pattern
+        except:
+            entry.delete(0, "end")
+            entry.insert(0, "")
+            self.clicker.config.click_pattern = ""
+    
     def update_config(self, attr, value, type_conv):
         """Update config attribute with type conversion"""
         setattr(self.clicker.config, attr, type_conv(value))
 
     def resize_window(self):
         """Dynamically resize window based on open sections"""
-        base_height = 620
+        base_height = 660
         self.geometry(f"400x{base_height}")
 
     def toggle_sliders_section(self):
@@ -2806,6 +2916,10 @@ class AntarcticGUI(ctk.CTk):
         
         self.delay_entry.delete(0, "end")
         self.delay_entry.insert(0, str(self.clicker.config.delay))
+        
+        # Update pattern input
+        self.pattern_entry.delete(0, "end")
+        self.pattern_entry.insert(0, self.clicker.config.click_pattern)
 
         self.sync_auto_burst_state()
 
