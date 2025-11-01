@@ -747,6 +747,8 @@ class AutoClicker:
         self.current_burst_clicks = 0
         self.last_burst_clicks = 0
         self.circular_jitter_angle = 0
+        self.f1_continuous_active = False
+        self.f1_continuous_thread = None
 
         # Timing monitoring
         self.last_delay_ms = 0.0
@@ -1045,6 +1047,113 @@ class AutoClicker:
                 if self.active_bursts == 0 and self.gui_callback:
                     self.gui_callback('burst_stopped')
 
+    def execute_continuous_burst(self):
+        """
+        Ejecuta clicks continuamente mientras F1 esté presionado.
+        Ignora el límite de clicks configurado.
+        """
+        if not self.is_connected or not self.target_hwnd or not self.target_x or not self.target_y:
+            return
+
+        with self.burst_lock:
+            self.active_bursts += 1
+            if self.active_bursts == 1 and self.gui_callback:
+                self.gui_callback('burst_started')
+
+        # Optimización de threading
+        current_thread = kernel32.GetCurrentThread()
+        priority = THREAD_PRIORITY_BELOW_NORMAL if self.config.ultra_mode else THREAD_PRIORITY_ABOVE_NORMAL
+        kernel32.SetThreadPriority(current_thread, priority)
+
+        try:
+            # === MINIMIZAR SYSTEM CALLS: Pre-cachear todo antes del loop ===
+            
+            # Cachear posiciones y ventana
+            client_x, client_y = self.screen_to_client(self.target_hwnd, self.target_x, self.target_y)
+            self._precalculate_click_params(client_x, client_y)
+            
+            # Cachear configuración en variables locales (evita acceso a atributos)
+            ultra_mode = self.config.ultra_mode
+            hwnd = self.target_hwnd
+            
+            # Verificar ventana UNA SOLA VEZ (no en cada iteración)
+            if not self.check_window_valid(hwnd):
+                return
+
+            # Pre-cachear mensajes de Windows (evita lookups repetidos)
+            msg_down = self._msg_down
+            msg_up = self._msg_up
+            wparam = self._wparam
+            lparam = self._lparam
+            lparam_up = self._lparam_up
+            
+            # Cachear funciones (evita lookups de métodos)
+            send_message = user32.SendMessageW
+            sleep = time.sleep
+            get_delay = self.get_timing_delay
+            
+            # Configuración de burst
+            clicks_sent = 0
+            stats_update_interval = 10
+            
+            # Determinar patrón de clics y pre-cachearlo
+            click_pattern = []
+            if self.config.click_pattern and self.config.click_pattern.strip():
+                try:
+                    click_pattern = [int(x.strip()) for x in self.config.click_pattern.split(',') if x.strip()]
+                except:
+                    click_pattern = []
+            
+            if not click_pattern:
+                click_pattern = [self.config.multiplier]
+            
+            pattern_len = len(click_pattern)
+            pattern_index = 0
+
+            # === LOOP CONTINUO: Sin límite de clicks, solo se detiene cuando F1 se suelta ===
+            while self.f1_continuous_active and self.running:
+                # Determinar cuantos clics enviar en este grupo
+                clicks_in_group = click_pattern[pattern_index % pattern_len]
+                
+                # Enviar el grupo de clics (mínimas system calls)
+                for i in range(clicks_in_group):
+                    if not self.f1_continuous_active or not self.running:
+                        break
+
+                    # System calls mínimas: solo enviar mensajes
+                    send_message(hwnd, msg_down, wparam, lparam)
+                    send_message(hwnd, msg_up, 0, lparam_up)
+
+                    # Actualizar contadores (sin system calls)
+                    self.total_clicks_sent += 1
+                    self.current_burst_clicks += 1
+                    clicks_sent += 1
+                    
+                    # Delay después de cada clic individual (respetar interval)
+                    if not ultra_mode and (i < clicks_in_group - 1 or self.f1_continuous_active):
+                        delay = get_delay()
+                        if delay > 0:
+                            sleep(delay)
+
+                pattern_index += 1
+
+                # Stats update (reducido, evita spam de callbacks)
+                if clicks_sent % stats_update_interval == 0 and self.gui_callback:
+                    self.gui_callback('stats_update')
+
+            # Stats final
+            if self.gui_callback:
+                self.gui_callback('stats_update')
+        finally:
+            # Restaurar prioridad normal
+            current_thread = kernel32.GetCurrentThread()
+            kernel32.SetThreadPriority(current_thread, THREAD_PRIORITY_NORMAL)
+
+            with self.burst_lock:
+                self.active_bursts -= 1
+                if self.active_bursts == 0 and self.gui_callback:
+                    self.gui_callback('burst_stopped')
+
 
 
     def capture_coordinates(self):
@@ -1056,11 +1165,30 @@ class AutoClicker:
             self.gui_callback('coords_captured')
 
     def monitor_keys(self):
+        f1_pressed = False
         f2_pressed = False
         f3_pressed = False
         f5_pressed = False
         lbutton_pressed = False
         while self.running:
+            # F1: Modo continuo (mantener presionado = autoclick infinito)
+            if self.is_key_pressed(VK_F1):
+                if not f1_pressed:
+                    # Activar modo continuo
+                    self.f1_continuous_active = True
+                    # Iniciar thread de burst continuo
+                    self.f1_continuous_thread = threading.Thread(
+                        target=self.execute_continuous_burst, 
+                        daemon=True
+                    )
+                    self.f1_continuous_thread.start()
+                    f1_pressed = True
+            else:
+                # Cuando se suelta F1, desactivar modo continuo
+                if f1_pressed:
+                    self.f1_continuous_active = False
+                    f1_pressed = False
+            
             if self.is_key_pressed(VK_F3):
                 if not f3_pressed:
                     self.capture_coordinates()

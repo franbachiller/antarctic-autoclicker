@@ -49,14 +49,9 @@ echo [3/5] Preparando archivos para compilacion...
 if not exist obfuscated\assets mkdir obfuscated\assets
 copy ..\src\antarctic.py obfuscated\ >nul
 copy ..\src\latency_compensator.py obfuscated\ >nul
-copy ..\src\updater.py obfuscated\ >nul
-copy ..\config_updater.py obfuscated\ >nul
 copy ..\assets\icon.ico obfuscated\assets\ >nul
 copy ..\assets\logo.png obfuscated\assets\ >nul
 copy ..\assets\logo_compact.png obfuscated\assets\ >nul
-
-REM Crear archivo version.txt con la version actual
-copy ..\src\version.txt obfuscated\version.txt >nul
 
 echo.
 
@@ -71,7 +66,6 @@ pyinstaller ^
     --add-data "assets\icon.ico;assets" ^
     --add-data "assets\logo.png;assets" ^
     --add-data "assets\logo_compact.png;assets" ^
-    --add-data "version.txt;." ^
     --add-data "pyarmor_runtime_000000;pyarmor_runtime_000000" ^
     --hidden-import=requests ^
     --hidden-import=urllib3 ^
@@ -81,7 +75,6 @@ pyinstaller ^
     --hidden-import=security ^
     --hidden-import=auth_client ^
     --hidden-import=latency_compensator ^
-    --hidden-import=updater ^
     --hidden-import=uuid ^
     --hidden-import=hashlib ^
     --hidden-import=platform ^
