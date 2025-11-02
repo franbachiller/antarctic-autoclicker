@@ -2373,9 +2373,29 @@ class AntarcticGUI(ctk.CTk):
         help_icon.pack(side="left", padx=(4, 0))
         ToolTip(help_icon, "Patrón de clics: ej. '3,2,1' = 3 clics, pausa, 2 clics, pausa, 1 clic.\nSi está vacío, usa el Multiplicador normal.")
         
+        # Right side frame for entry and button
+        right_frame = ctk.CTkFrame(container, fg_color="transparent")
+        right_frame.pack(side="right")
+        
+        # Random pattern button
+        random_btn = ctk.CTkButton(
+            right_frame,
+            text="🎲",
+            width=32,
+            height=32,
+            font=("Segoe UI", 14),
+            fg_color=COLORS['bg_secondary'],
+            hover_color=COLORS['accent_blue'],
+            text_color=COLORS['text_primary'],
+            corner_radius=8,
+            command=lambda: self.generate_random_pattern(entry)
+        )
+        random_btn.pack(side="left", padx=(0, 4))
+        ToolTip(random_btn, "Generar patrón aleatorio eficaz")
+        
         # Entry field
         entry = ctk.CTkEntry(
-            container,
+            right_frame,
             width=150,
             height=32,
             font=("Segoe UI", 11),
@@ -2386,7 +2406,7 @@ class AntarcticGUI(ctk.CTk):
             placeholder_text="ej: 3,2,1",
             justify="center"
         )
-        entry.pack(side="right")
+        entry.pack(side="left")
         entry.insert(0, default_value)
         
         # Bind events
@@ -2394,6 +2414,54 @@ class AntarcticGUI(ctk.CTk):
         entry.bind("<FocusOut>", lambda e: self.validate_pattern_input(entry))
         
         return entry
+    
+    def generate_random_pattern(self, entry):
+        """Generate a random but effective click pattern"""
+        # Pattern length: 6-10 groups (balanced)
+        pattern_length = random.randint(6, 10)
+        
+        # Click values pool with weighted distribution
+        # More 1s and 2s (70%), fewer 3s and 4s (30%)
+        click_values = [1, 1, 1, 2, 2, 2, 3, 4]
+        
+        pattern = []
+        last_value = None
+        consecutive_count = 0
+        
+        for i in range(pattern_length):
+            # Get a random value
+            value = random.choice(click_values)
+            
+            # Avoid more than 2 consecutive identical values (more natural)
+            if value == last_value:
+                consecutive_count += 1
+                if consecutive_count >= 2:
+                    # Force different value
+                    available = [v for v in click_values if v != last_value]
+                    value = random.choice(available)
+                    consecutive_count = 0
+            else:
+                consecutive_count = 0
+            
+            pattern.append(value)
+            last_value = value
+        
+        # Convert to string format
+        pattern_str = ','.join(map(str, pattern))
+        
+        # Update entry field
+        entry.delete(0, "end")
+        entry.insert(0, pattern_str)
+        
+        # Validate and apply
+        self.validate_pattern_input(entry)
+        
+        # Show brief feedback
+        if hasattr(self, 'status_label'):
+            original_text = self.status_label.cget("text")
+            self.status_label.configure(text=f"Patrón generado: {pattern_str}")
+            # Restore original text after 2 seconds
+            self.after(2000, lambda: self.status_label.configure(text=original_text))
     
     def validate_pattern_input(self, entry):
         """Validate and apply pattern input"""
