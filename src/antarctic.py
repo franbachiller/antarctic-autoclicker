@@ -191,7 +191,6 @@ class ClickConfig:
         self.mouse_button = 'left'
         self.input_method = 'postmessage'
         self.auto_burst_enabled = False
-        self.click_mode = 'normal'
 
     def to_dict(self):
         data = {}
@@ -351,7 +350,6 @@ class AutoClicker:
 
         # Timing monitoring
         self.last_delay_ms = 0.0
-        self.last_markov_state = "medium"
 
         # Advanced timing system components
         self.threading_optimizer = ThreadingOptimizer()
@@ -401,10 +399,7 @@ class AutoClicker:
 
     def send_single_click_postmessage(self, hwnd, x, y):
         user32.SendMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
-        if self.config.click_mode == 'hold':
-            time.sleep(self.config.hold_duration_ms / 1000.0)
-        else:
-            time.sleep(self._timing_delay)
+        time.sleep(self._timing_delay)
         user32.SendMessageW(hwnd, self._msg_up, 0, self._lparam_up)
         self.total_clicks_sent += 1
         self.current_burst_clicks += 1
@@ -417,12 +412,7 @@ class AutoClicker:
         wparam = button_flag | modifier_flags
         if self.config.mouse_button in ['x1', 'x2']:
             wparam = (button_flag << 16) | modifier_flags
-        if self.config.click_mode == 'drag':
-            drag_x = jittered_x + self.config.drag_offset_x
-            drag_y = jittered_y + self.config.drag_offset_y
-            lparam_up = (drag_y << 16) | drag_x
-        else:
-            lparam_up = lparam
+        lparam_up = lparam
         self._msg_down = msg_down
         self._msg_up = msg_up
         self._wparam = wparam
@@ -784,139 +774,6 @@ class AutoClicker:
         if self.latency_compensator:
             self.latency_compensator.disconnect()
 
-class AdvancedTimingDialog(ctk.CTkToplevel):
-    """Dialog for configuring advanced timing parameters"""
-    def __init__(self, parent, config):
-        super().__init__(parent)
-        self.title("Advanced Timing Configuration")
-        self.geometry("500x600")
-        self.resizable(False, False)
-        self.config = config
-
-        # Configure window
-        self.configure(fg_color=COLORS['bg_primary'])
-
-        # Center window
-        self.update_idletasks()
-        x = (self.winfo_screenwidth() // 2) - (250)
-        y = (self.winfo_screenheight() // 2) - (300)
-        self.geometry(f'+{x}+{y}')
-
-        self.setup_ui()
-
-    def setup_ui(self):
-        # Main container
-        main_frame = ctk.CTkScrollableFrame(
-            self,
-            fg_color=COLORS['bg_secondary'],
-            corner_radius=12,
-            border_width=2,
-            border_color=COLORS['accent_blue']
-        )
-        main_frame.pack(fill="both", expand=True, padx=12, pady=12)
-
-        # === MARKOV CHAIN SECTION ===
-        self.create_section_header(main_frame, "🔗 Markov Chain Timing")
-
-        markov_frame = self.create_section_frame(main_frame)
-
-        self.create_slider_with_label(
-            markov_frame, "Fast Speed Multiplier", 0.1, 2.0,
-            self.config.markov_fast_multiplier,
-            lambda v: setattr(self.config, 'markov_fast_multiplier', v)
-        )
-
-        self.create_slider_with_label(
-            markov_frame, "Medium Speed Multiplier", 0.1, 2.0,
-            self.config.markov_medium_multiplier,
-            lambda v: setattr(self.config, 'markov_medium_multiplier', v)
-        )
-
-        self.create_slider_with_label(
-            markov_frame, "Slow Speed Multiplier", 0.1, 3.0,
-            self.config.markov_slow_multiplier,
-            lambda v: setattr(self.config, 'markov_slow_multiplier', v)
-        )
-
-        # Close button
-        close_btn = ctk.CTkButton(
-            main_frame,
-            text="Close",
-            height=40,
-            corner_radius=10,
-            fg_color=COLORS['accent_blue'],
-            hover_color=COLORS['accent_cyan'],
-            font=("Segoe UI", 12, "bold"),
-            command=self.destroy
-        )
-        close_btn.pack(fill="x", padx=10, pady=(15, 10))
-
-    def create_section_header(self, parent, text):
-        """Create a section header"""
-        header = ctk.CTkLabel(
-            parent,
-            text=text,
-            font=("Segoe UI", 12, "bold"),
-            text_color=COLORS['accent_cyan']
-        )
-        header.pack(anchor="w", padx=10, pady=(10, 5))
-
-    def create_section_frame(self, parent):
-        """Create a frame for section content"""
-        frame = ctk.CTkFrame(
-            parent,
-            fg_color=COLORS['bg_card'],
-            corner_radius=8,
-            border_width=1,
-            border_color=COLORS['border']
-        )
-        frame.pack(fill="x", padx=5, pady=(0, 10))
-        return frame
-
-    def create_slider_with_label(self, parent, label_text, from_, to, default_value, command):
-        """Create a slider with label and value display"""
-        container = ctk.CTkFrame(parent, fg_color="transparent")
-        container.pack(fill="x", padx=10, pady=5)
-
-        # Label and value
-        label_frame = ctk.CTkFrame(container, fg_color="transparent")
-        label_frame.pack(fill="x")
-
-        ctk.CTkLabel(
-            label_frame,
-            text=label_text,
-            font=("Segoe UI", 9),
-            text_color=COLORS['text_secondary']
-        ).pack(side="left")
-
-        value_label = ctk.CTkLabel(
-            label_frame,
-            text=f"{default_value:.2f}",
-            font=("Segoe UI", 9, "bold"),
-            text_color=COLORS['accent_cyan']
-        )
-        value_label.pack(side="right")
-
-        # Slider
-        slider = ctk.CTkSlider(
-            container,
-            from_=from_,
-            to=to,
-            number_of_steps=100,
-            fg_color=COLORS['bg_primary'],
-            progress_color=COLORS['accent_blue'],
-            button_color=COLORS['accent_cyan'],
-            button_hover_color=COLORS['glow'],
-            command=lambda v: self.on_slider_change(v, value_label, command)
-        )
-        slider.set(default_value)
-        slider.pack(fill="x", pady=(2, 0))
-
-    def on_slider_change(self, value, label, command):
-        """Handle slider value change"""
-        label.configure(text=f"{value:.2f}")
-        command(value)
-
 class ActivationWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -1271,50 +1128,6 @@ class AntarcticGUI(ctk.CTk):
             text_color=COLORS['accent_cyan']
         ).pack(side="left")
 
-        # Help icon
-        adv_help = ctk.CTkLabel(
-            header_row,
-            text="?",
-            font=("Segoe UI", 9),
-            text_color=COLORS['text_dim'],
-            width=14
-        )
-        adv_help.pack(side="left", padx=(4, 0))
-        ToolTip(adv_help, "Timing avanzado: Markov")
-
-        # Settings button
-        settings_btn = ctk.CTkButton(
-            header_row,
-            text="⚙",
-            width=28,
-            height=22,
-            corner_radius=6,
-            fg_color=COLORS['bg_primary'],
-            hover_color=COLORS['accent_blue'],
-            font=("Segoe UI", 11),
-            command=self.open_advanced_timing_dialog
-        )
-        settings_btn.pack(side="right")
-
-        # Toggles row
-        toggles_row = ctk.CTkFrame(content_frame, fg_color="transparent")
-        toggles_row.pack(fill="x", pady=(0, 4))
-
-        # Markov Chain toggle
-        self.markov_checkbox = ctk.CTkCheckBox(
-            toggles_row,
-            text="Markov",
-            font=("Segoe UI", 9),
-            command=self.toggle_markov_chain,
-            checkbox_width=16,
-            checkbox_height=16,
-            corner_radius=4,
-            text_color=COLORS['text_primary'],
-            fg_color=COLORS['accent_blue'],
-            hover_color=COLORS['accent_cyan']
-        )
-        self.markov_checkbox.pack(side="left", padx=(0, 10))
-
         # Timing monitor (shows real-time values)
         monitor_row = ctk.CTkFrame(content_frame, fg_color="transparent")
         monitor_row.pack(fill="x")
@@ -1609,11 +1422,11 @@ class AntarcticGUI(ctk.CTk):
 
         # Create numeric inputs
         self.clicks_entry = self.create_numeric_input(
-            self.sliders_content, "Limitador (Clics)", 24, 1, 1000,
+            self.sliders_content, "Limitador (Clics)", 1, 1, 1000,
             lambda v: self.update_config('clicks', v, int)
         )
         self.interval_entry = self.create_numeric_input(
-            self.sliders_content, "Intervalo (ms)", 10, 0.1, 1000,
+            self.sliders_content, "Intervalo (ms)", 1, 0.1, 1000,
             lambda v: self.update_config('interval', v, float)
         )
         self.multiplier_entry = self.create_numeric_input(
@@ -2176,9 +1989,6 @@ class AntarcticGUI(ctk.CTk):
     def toggle_advanced_timing(self):
         pass
 
-    def toggle_markov_chain(self):
-        pass
-
     def toggle_latency_section(self):
         """Expande/colapsa la sección de latency"""
         if self.latency_expanded:
@@ -2305,12 +2115,6 @@ class AntarcticGUI(ctk.CTk):
     def _on_latency_connected(self):
         """Callback cuando se conecta al sistema de latencia"""
         pass
-
-    def open_advanced_timing_dialog(self):
-        """Open dialog for advanced timing configuration"""
-        dialog = AdvancedTimingDialog(self, self.clicker.config)
-        dialog.grab_set()  # Make dialog modal
-        self.wait_window(dialog)  # Wait for dialog to close
 
     def handle_callback(self, event, data=None):
         # Don't schedule callbacks if window is closing
