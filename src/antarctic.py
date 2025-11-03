@@ -995,20 +995,20 @@ class AntarcticGUI(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def create_header(self):
-        """Frutiger Aero styled header with text logo"""
-        header_frame = ctk.CTkFrame(self, fg_color="transparent", height=70)
-        header_frame.pack(fill="x", padx=0, pady=(12, 8))
+        """Polished header with refined logo"""
+        header_frame = ctk.CTkFrame(self, fg_color="transparent", height=75)
+        header_frame.pack(fill="x", padx=0, pady=(10, 6))
         header_frame.pack_propagate(False)
 
-        # Stylized text logo - Frutiger Aero style
+        # Stylized text logo
         logo_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
         logo_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Main title - Neon blue glow effect
+        # Main title - Enhanced
         title = ctk.CTkLabel(
             logo_frame,
             text="A N T A R C T I C",
-            font=("Bahnschrift SemiBold", 36, "bold"),
+            font=("Bahnschrift SemiBold", 38, "bold"),
             text_color=COLORS['accent_blue']
         )
         title.pack()
@@ -1017,21 +1017,21 @@ class AntarcticGUI(ctk.CTk):
         tagline = ctk.CTkLabel(
             logo_frame,
             text="by bachi",
-            font=("Arial", 9),
-            text_color=COLORS['text_secondary']
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim']
         )
-        tagline.pack(pady=(4, 0))
+        tagline.pack(pady=(2, 0))
     def create_main_content(self):
-        """Create all main content in Frutiger Aero style"""
-        # Main container with fire red border
+        """Create all main content with polished design"""
+        # Main container with refined border
         main_container = ctk.CTkFrame(
             self,
             fg_color=COLORS['bg_secondary'],
-            corner_radius=18,
-            border_width=3,
+            corner_radius=16,
+            border_width=2,
             border_color=COLORS['accent_blue']
         )
-        main_container.pack(fill="x", padx=12, pady=(0, 12))
+        main_container.pack(fill="x", padx=14, pady=(0, 14))
 
         # Status bar at top
         self.create_status_bar(main_container)
@@ -1046,44 +1046,44 @@ class AntarcticGUI(ctk.CTk):
         self.create_footer(main_container)
     
     def create_status_bar(self, parent):
-        """Status bar with fire red accents"""
+        """Refined status bar"""
         status_frame = ctk.CTkFrame(
             parent,
             fg_color=COLORS['bg_card'],
-            corner_radius=12,
-            height=40,
+            corner_radius=10,
+            height=38,
             border_width=1,
             border_color=COLORS['border']
         )
-        status_frame.pack(fill="x", padx=12, pady=(12, 8))
+        status_frame.pack(fill="x", padx=14, pady=(14, 10))
         status_frame.pack_propagate(False)
 
-        # Connection status with glow
+        # Connection status
         self.conn_indicator = ctk.CTkLabel(
             status_frame,
             text="⬤ OFFLINE",
-            font=("Segoe UI", 10, "bold"),
+            font=("Segoe UI", 9, "bold"),
             text_color="#FF4757"
         )
-        self.conn_indicator.pack(side="left", padx=15)
+        self.conn_indicator.pack(side="left", padx=12)
 
         # Coordinates - center
         self.coords_label = ctk.CTkLabel(
             status_frame,
             text="―――",
-            font=("Segoe UI", 10),
+            font=("Segoe UI", 9),
             text_color=COLORS['text_dim']
         )
         self.coords_label.pack(side="left", expand=True)
 
-        # Stats - right with glow effect
+        # Stats - right side
         self.stats_label = ctk.CTkLabel(
             status_frame,
             text="0",
-            font=("Segoe UI", 12, "bold"),
+            font=("Segoe UI", 11, "bold"),
             text_color=COLORS['accent_cyan']
         )
-        self.stats_label.pack(side="right", padx=15)
+        self.stats_label.pack(side="right", padx=12)
         
     def create_controls(self, parent):
         """Compact controls with collapsible sections"""
@@ -1369,38 +1369,38 @@ class AntarcticGUI(ctk.CTk):
             btn = ctk.CTkButton(
                 btn_frame,
                 text=text,
-                width=55,
-                height=30,
-                corner_radius=8,
+                width=50,
+                height=28,
+                corner_radius=6,
                 fg_color=color,
                 hover_color=color,
-                font=("Segoe UI", 10, "bold"),
+                font=("Segoe UI", 9, "bold"),
                 command=cmd
             )
-            btn.pack(side="left", padx=3)
+            btn.pack(side="left", padx=2)
 
     def create_collapsible_sliders(self, parent):
-        """Settings section with numeric inputs"""
+        """Polished settings section with numeric inputs"""
         # Main container
         self.sliders_section = ctk.CTkFrame(
             parent,
             fg_color=COLORS['bg_card'],
-            corner_radius=12,
+            corner_radius=10,
             border_width=1,
             border_color=COLORS['border']
         )
-        self.sliders_section.pack(fill="x", pady=(0, 8))
+        self.sliders_section.pack(fill="x", pady=(0, 10))
 
         # Header
-        header_frame = ctk.CTkFrame(self.sliders_section, fg_color="transparent", height=36)
-        header_frame.pack(fill="x", padx=12, pady=8)
+        header_frame = ctk.CTkFrame(self.sliders_section, fg_color="transparent", height=34)
+        header_frame.pack(fill="x", padx=14, pady=(10, 6))
         header_frame.pack_propagate(False)
 
         # Title
         ctk.CTkLabel(
             header_frame,
             text="BASIC SETTINGS",
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 10, "bold"),
             text_color=COLORS['text_primary']
         ).pack(side="left")
 
@@ -1408,17 +1408,17 @@ class AntarcticGUI(ctk.CTk):
         help_label = ctk.CTkLabel(
             header_frame,
             text="?",
-            font=("Segoe UI", 10),
+            font=("Segoe UI", 9),
             text_color=COLORS['text_dim'],
-            width=16,
-            height=16
+            width=14,
+            height=14
         )
-        help_label.pack(side="left", padx=(4, 0))
+        help_label.pack(side="left", padx=(6, 0))
         ToolTip(help_label, "Limitador, Intervalo, Multiplicador y Delay del autoclicker")
 
         # Content frame
         self.sliders_content = ctk.CTkFrame(self.sliders_section, fg_color="transparent")
-        self.sliders_content.pack(fill="x", padx=12, pady=(0, 12))
+        self.sliders_content.pack(fill="x", padx=14, pady=(0, 14))
 
         # Create numeric inputs
         self.clicks_entry = self.create_numeric_input(
@@ -1444,9 +1444,9 @@ class AntarcticGUI(ctk.CTk):
         )
 
     def create_numeric_input(self, parent, label_text, default_value, min_val, max_val, callback):
-        """Create a numeric input with +/- buttons"""
+        """Create a polished numeric input with +/- buttons"""
         container = ctk.CTkFrame(parent, fg_color="transparent")
-        container.pack(fill="x", pady=6)
+        container.pack(fill="x", pady=5)
         
         # Label
         label_frame = ctk.CTkFrame(container, fg_color="transparent")
@@ -1455,7 +1455,7 @@ class AntarcticGUI(ctk.CTk):
         ctk.CTkLabel(
             label_frame,
             text=label_text,
-            font=("Segoe UI", 10, "bold"),
+            font=("Segoe UI", 9, "bold"),
             text_color=COLORS['text_primary'],
             anchor="w"
         ).pack(side="left")
@@ -1468,30 +1468,30 @@ class AntarcticGUI(ctk.CTk):
         decrease_btn = ctk.CTkButton(
             control_frame,
             text="-",
-            width=32,
-            height=32,
-            font=("Segoe UI", 16, "bold"),
+            width=30,
+            height=30,
+            font=("Segoe UI", 15, "bold"),
             fg_color=COLORS['bg_secondary'],
             hover_color=COLORS['accent_blue'],
             text_color=COLORS['text_primary'],
-            corner_radius=8,
+            corner_radius=6,
             command=lambda: self.adjust_numeric_value(entry, -1, min_val, max_val, callback, isinstance(default_value, float))
         )
-        decrease_btn.pack(side="left", padx=(0, 4))
+        decrease_btn.pack(side="left", padx=(0, 5))
         
         # Entry field
         entry = ctk.CTkEntry(
             control_frame,
-            width=80,
-            height=32,
-            font=("Segoe UI", 12, "bold"),
+            width=75,
+            height=30,
+            font=("Segoe UI", 11, "bold"),
             fg_color=COLORS['bg_primary'],
             border_color=COLORS['accent_blue'],
             border_width=2,
             text_color=COLORS['text_primary'],
             justify="center"
         )
-        entry.pack(side="left", padx=4)
+        entry.pack(side="left", padx=5)
         entry.insert(0, str(default_value))
         
         # Bind events
@@ -1502,16 +1502,16 @@ class AntarcticGUI(ctk.CTk):
         increase_btn = ctk.CTkButton(
             control_frame,
             text="+",
-            width=32,
-            height=32,
-            font=("Segoe UI", 16, "bold"),
+            width=30,
+            height=30,
+            font=("Segoe UI", 15, "bold"),
             fg_color=COLORS['bg_secondary'],
             hover_color=COLORS['accent_blue'],
             text_color=COLORS['text_primary'],
-            corner_radius=8,
+            corner_radius=6,
             command=lambda: self.adjust_numeric_value(entry, 1, min_val, max_val, callback, isinstance(default_value, float))
         )
-        increase_btn.pack(side="left", padx=(4, 0))
+        increase_btn.pack(side="left", padx=(5, 0))
         
         return entry
     
@@ -1564,9 +1564,9 @@ class AntarcticGUI(ctk.CTk):
                 entry.insert(0, str(int(min_val)))
     
     def create_pattern_input(self, parent, label_text, default_value):
-        """Create a text input for click pattern"""
+        """Create a polished text input for click pattern"""
         container = ctk.CTkFrame(parent, fg_color="transparent")
-        container.pack(fill="x", pady=6)
+        container.pack(fill="x", pady=5)
         
         # Label with help icon
         label_frame = ctk.CTkFrame(container, fg_color="transparent")
@@ -1575,7 +1575,7 @@ class AntarcticGUI(ctk.CTk):
         ctk.CTkLabel(
             label_frame,
             text=label_text,
-            font=("Segoe UI", 10, "bold"),
+            font=("Segoe UI", 9, "bold"),
             text_color=COLORS['text_primary'],
             anchor="w"
         ).pack(side="left")
@@ -1584,9 +1584,9 @@ class AntarcticGUI(ctk.CTk):
         help_icon = ctk.CTkLabel(
             label_frame,
             text="?",
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 8),
             text_color=COLORS['text_dim'],
-            width=14
+            width=12
         )
         help_icon.pack(side="left", padx=(4, 0))
         ToolTip(help_icon, "Patrón de clics: ej. '3,2,1' = 3 clics, pausa, 2 clics, pausa, 1 clic.\nSi está vacío, usa el Multiplicador normal.")
@@ -1599,24 +1599,24 @@ class AntarcticGUI(ctk.CTk):
         random_btn = ctk.CTkButton(
             right_frame,
             text="🎲",
-            width=32,
-            height=32,
-            font=("Segoe UI", 14),
+            width=30,
+            height=30,
+            font=("Segoe UI", 13),
             fg_color=COLORS['bg_secondary'],
             hover_color=COLORS['accent_blue'],
             text_color=COLORS['text_primary'],
-            corner_radius=8,
+            corner_radius=6,
             command=lambda: self.generate_random_pattern(entry)
         )
-        random_btn.pack(side="left", padx=(0, 4))
+        random_btn.pack(side="left", padx=(0, 5))
         ToolTip(random_btn, "Generar patrón aleatorio eficaz")
         
         # Entry field
         entry = ctk.CTkEntry(
             right_frame,
-            width=150,
-            height=32,
-            font=("Segoe UI", 11),
+            width=140,
+            height=30,
+            font=("Segoe UI", 10),
             fg_color=COLORS['bg_primary'],
             border_color=COLORS['accent_blue'],
             border_width=2,
@@ -1939,40 +1939,40 @@ class AntarcticGUI(ctk.CTk):
         ToolTip(burst_help, "Varía la cantidad de clicks por burst")
 
     def create_action_buttons(self, parent):
-        """Action button - auto-burst"""
+        """Polished action button"""
         buttons_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        buttons_frame.pack(fill="x", padx=12, pady=(0, 4))
+        buttons_frame.pack(fill="x", padx=14, pady=(0, 10))
 
-        # Single auto-burst button with fire red accent
+        # Auto-burst button with refined styling
         self.autoburst_button = ctk.CTkButton(
             buttons_frame,
             text="AUTO-BURST",
-            height=42,
-            corner_radius=12,
+            height=40,
+            corner_radius=10,
             fg_color=COLORS['bg_card'],
             hover_color=COLORS['accent_blue'],
             border_width=2,
             border_color=COLORS['accent_blue'],
-            font=("Segoe UI", 13, "bold"),
+            font=("Segoe UI", 12, "bold"),
             text_color=COLORS['text_primary'],
             command=self.toggle_auto_burst
         )
         self.autoburst_button.pack(fill="x")
 
     def create_footer(self, parent):
-        """Footer with license info"""
-        footer = ctk.CTkFrame(parent, fg_color="transparent", height=40)
-        footer.pack(fill="x", padx=12, pady=(0, 10))
+        """Polished footer with license info"""
+        footer = ctk.CTkFrame(parent, fg_color="transparent", height=36)
+        footer.pack(fill="x", padx=14, pady=(0, 12))
         footer.pack_propagate(False)
 
         # License info label
         self.license_label = ctk.CTkLabel(
             footer,
             text="",
-            font=("Segoe UI", 10),
-            text_color=COLORS['text_secondary']
+            font=("Segoe UI", 9),
+            text_color=COLORS['text_dim']
         )
-        self.license_label.pack(side="bottom", pady=(4, 0))
+        self.license_label.pack(side="bottom", pady=(2, 0))
 
         # Update license info
         self.update_license_display()
