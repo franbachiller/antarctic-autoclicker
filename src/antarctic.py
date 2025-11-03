@@ -398,9 +398,9 @@ class AutoClicker:
         return 0
 
     def send_single_click_postmessage(self, hwnd, x, y):
-        user32.SendMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
-        time.sleep(self._timing_delay)
-        user32.SendMessageW(hwnd, self._msg_up, 0, self._lparam_up)
+        # Usar PostMessage para máxima velocidad (asíncrono)
+        user32.PostMessageW(hwnd, self._msg_down, self._wparam, self._lparam)
+        user32.PostMessageW(hwnd, self._msg_up, 0, self._lparam_up)
         self.total_clicks_sent += 1
         self.current_burst_clicks += 1
 
@@ -484,9 +484,9 @@ class AutoClicker:
             if self.active_bursts == 1 and self.gui_callback:
                 self.gui_callback('burst_started')
 
-        # Optimizacion de threading
+        # Optimizacion de threading - Prioridad crítica para máximo rendimiento
         current_thread = kernel32.GetCurrentThread()
-        priority = THREAD_PRIORITY_ABOVE_NORMAL
+        priority = THREAD_PRIORITY_TIME_CRITICAL
         kernel32.SetThreadPriority(current_thread, priority)
 
         try:
@@ -511,14 +511,14 @@ class AutoClicker:
             lparam = self._lparam
             lparam_up = self._lparam_up
             
-            # Cachear funciones (evita lookups de metodos)
-            send_message = user32.SendMessageW
+            # Cachear funciones (evita lookups de metodos) - Usar PostMessage (asíncrono, más rápido)
+            post_message = user32.PostMessageW
             sleep = time.sleep
             get_delay = self.get_timing_delay
             
             # Configuracion de burst
             clicks_sent = 0
-            stats_update_interval = 10
+            stats_update_interval = 50  # Reducir frecuencia de callbacks para mayor rendimiento
             
             # Determinar patron de clics y pre-cachearlo
             click_pattern = []
@@ -545,9 +545,9 @@ class AutoClicker:
                     if not self.running:
                         break
 
-                    # System calls minimas: solo enviar mensajes
-                    send_message(hwnd, msg_down, wparam, lparam)
-                    send_message(hwnd, msg_up, 0, lparam_up)
+                    # System calls minimas: PostMessage asíncrono (sin esperar respuesta = más rápido)
+                    post_message(hwnd, msg_down, wparam, lparam)
+                    post_message(hwnd, msg_up, 0, lparam_up)
 
                     # Actualizar contadores (sin system calls)
                     self.total_clicks_sent += 1
@@ -592,9 +592,9 @@ class AutoClicker:
             if self.active_bursts == 1 and self.gui_callback:
                 self.gui_callback('burst_started')
 
-        # Optimización de threading
+        # Optimización de threading - Prioridad crítica para máximo rendimiento
         current_thread = kernel32.GetCurrentThread()
-        priority = THREAD_PRIORITY_ABOVE_NORMAL
+        priority = THREAD_PRIORITY_TIME_CRITICAL
         kernel32.SetThreadPriority(current_thread, priority)
 
         try:
@@ -618,14 +618,14 @@ class AutoClicker:
             lparam = self._lparam
             lparam_up = self._lparam_up
             
-            # Cachear funciones (evita lookups de métodos)
-            send_message = user32.SendMessageW
+            # Cachear funciones (evita lookups de métodos) - Usar PostMessage (asíncrono, más rápido)
+            post_message = user32.PostMessageW
             sleep = time.sleep
             get_delay = self.get_timing_delay
             
             # Configuración de burst
             clicks_sent = 0
-            stats_update_interval = 10
+            stats_update_interval = 50  # Reducir frecuencia de callbacks para mayor rendimiento
             
             # Determinar patrón de clics y pre-cachearlo
             click_pattern = []
@@ -651,9 +651,9 @@ class AutoClicker:
                     if not self.f1_continuous_active or not self.running:
                         break
 
-                    # System calls mínimas: solo enviar mensajes
-                    send_message(hwnd, msg_down, wparam, lparam)
-                    send_message(hwnd, msg_up, 0, lparam_up)
+                    # System calls mínimas: PostMessage asíncrono (sin esperar respuesta = más rápido)
+                    post_message(hwnd, msg_down, wparam, lparam)
+                    post_message(hwnd, msg_up, 0, lparam_up)
 
                     # Actualizar contadores (sin system calls)
                     self.total_clicks_sent += 1
