@@ -962,7 +962,7 @@ class AntarcticGUI(ctk.CTk):
     def __init__(self, key_manager):
         super().__init__()
         self.title("ANTARCTIC")
-        self.geometry("400x660")  # Tamaño con sliders siempre visibles + patron
+        self.geometry("400x620")  # Tamaño optimizado
         self.resizable(False, False)
 
         # Set window icon
@@ -1723,7 +1723,7 @@ class AntarcticGUI(ctk.CTk):
 
     def resize_window(self):
         """Dynamically resize window based on open sections"""
-        base_height = 660
+        base_height = 620
         self.geometry(f"400x{base_height}")
 
     def toggle_sliders_section(self):
