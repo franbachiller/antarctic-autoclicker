@@ -39,6 +39,48 @@ COLORS = {
 user32 = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
 
+# High precision timing (QueryPerformanceCounter)
+class HighPrecisionTimer:
+    """Timer de alta precisión usando QueryPerformanceCounter de Windows"""
+    def __init__(self):
+        self.frequency = wintypes.LARGE_INTEGER()
+        kernel32.QueryPerformanceFrequency(ctypes.byref(self.frequency))
+        self.freq = self.frequency.value
+        
+    def get_time(self):
+        """Obtener tiempo actual en segundos con precisión de nanosegundos"""
+        counter = wintypes.LARGE_INTEGER()
+        kernel32.QueryPerformanceCounter(ctypes.byref(counter))
+        return counter.value / self.freq
+    
+    def precise_sleep(self, duration_seconds):
+        """
+        Sleep de alta precisión.
+        - Para delays > 5ms: usa time.sleep() + busy-wait final
+        - Para delays < 5ms: usa busy-wait puro (máxima precisión)
+        """
+        if duration_seconds <= 0:
+            return
+        
+        # Para delays muy cortos (< 5ms), usar busy-wait puro
+        if duration_seconds < 0.005:
+            end_time = self.get_time() + duration_seconds
+            while self.get_time() < end_time:
+                pass  # Busy-wait
+        else:
+            # Para delays más largos, usar sleep() + busy-wait final
+            # Dormir el 90% del tiempo con sleep() (libera CPU)
+            sleep_time = duration_seconds * 0.9
+            time.sleep(sleep_time)
+            
+            # Busy-wait para el 10% final (máxima precisión)
+            end_time = self.get_time() + (duration_seconds * 0.1)
+            while self.get_time() < end_time:
+                pass
+
+# Instancia global del timer de alta precisión
+_hp_timer = HighPrecisionTimer()
+
 # Resource path helper
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
@@ -513,7 +555,7 @@ class AutoClicker:
             
             # Cachear funciones (evita lookups de metodos) - Usar PostMessage (asíncrono, más rápido)
             post_message = user32.PostMessageW
-            sleep = time.sleep
+            precise_sleep = _hp_timer.precise_sleep  # Timer de alta precisión Windows
             get_delay = self.get_timing_delay
             
             # Configuracion de burst
@@ -556,11 +598,11 @@ class AutoClicker:
 
                 pattern_index += 1
 
-                # Delay entre grupos (solo si es necesario)
+                # Delay entre grupos (solo si es necesario) - Timer de alta precisión
                 if clicks_sent < total_clicks_limit:
                     delay = get_delay()
                     if delay > 0:
-                        sleep(delay)
+                        precise_sleep(delay)
 
                 # Stats update (reducido, evita spam de callbacks)
                 if clicks_sent % stats_update_interval == 0 and self.gui_callback:
@@ -620,7 +662,7 @@ class AutoClicker:
             
             # Cachear funciones (evita lookups de métodos) - Usar PostMessage (asíncrono, más rápido)
             post_message = user32.PostMessageW
-            sleep = time.sleep
+            precise_sleep = _hp_timer.precise_sleep  # Timer de alta precisión Windows
             get_delay = self.get_timing_delay
             
             # Configuración de burst
@@ -660,11 +702,11 @@ class AutoClicker:
                     self.current_burst_clicks += 1
                     clicks_sent += 1
                     
-                    # Delay después de cada clic individual (respetar interval)
+                    # Delay después de cada clic individual (respetar interval) - Timer de alta precisión
                     if i < clicks_in_group - 1 or self.f1_continuous_active:
                         delay = get_delay()
                         if delay > 0:
-                            sleep(delay)
+                            precise_sleep(delay)
 
                 pattern_index += 1
 
