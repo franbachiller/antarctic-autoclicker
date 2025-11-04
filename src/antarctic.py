@@ -564,12 +564,17 @@ class AutoClicker:
             
             # Determinar patron de clics y pre-cachearlo
             click_pattern = []
-            if self.config.click_pattern and self.config.click_pattern.strip():
-                try:
-                    click_pattern = [int(x.strip()) for x in self.config.click_pattern.split(',') if x.strip()]
-                except:
-                    click_pattern = []
+            pattern_str = self.config.click_pattern.strip() if self.config.click_pattern else ""
             
+            if pattern_str:  # Si hay patrón definido, usarlo
+                try:
+                    parsed_pattern = [int(x.strip()) for x in pattern_str.split(',') if x.strip()]
+                    if parsed_pattern and all(n > 0 for n in parsed_pattern):
+                        click_pattern = parsed_pattern
+                except:
+                    pass
+            
+            # Si no hay patrón válido, usar el multiplicador
             if not click_pattern:
                 click_pattern = [self.config.multiplier]
             
@@ -671,12 +676,17 @@ class AutoClicker:
             
             # Determinar patrón de clics y pre-cachearlo
             click_pattern = []
-            if self.config.click_pattern and self.config.click_pattern.strip():
-                try:
-                    click_pattern = [int(x.strip()) for x in self.config.click_pattern.split(',') if x.strip()]
-                except:
-                    click_pattern = []
+            pattern_str = self.config.click_pattern.strip() if self.config.click_pattern else ""
             
+            if pattern_str:  # Si hay patrón definido, usarlo
+                try:
+                    parsed_pattern = [int(x.strip()) for x in pattern_str.split(',') if x.strip()]
+                    if parsed_pattern and all(n > 0 for n in parsed_pattern):
+                        click_pattern = parsed_pattern
+                except:
+                    pass
+            
+            # Si no hay patrón válido, usar el multiplicador
             if not click_pattern:
                 click_pattern = [self.config.multiplier]
             
@@ -2245,7 +2255,12 @@ class AntarcticGUI(ctk.CTk):
             return
             
         if self.clicker.active_bursts == 0:
-            self.timing_monitor_label.configure(text="Monitor: Ready")
+            # Mostrar configuración actual cuando no hay burst activo
+            pattern_str = self.clicker.config.click_pattern.strip() if self.clicker.config.click_pattern else ""
+            if pattern_str:
+                self.timing_monitor_label.configure(text=f"Patrón: {pattern_str} | Intervalo: {self.clicker.config.interval}ms")
+            else:
+                self.timing_monitor_label.configure(text=f"Mult: x{self.clicker.config.multiplier} | Intervalo: {self.clicker.config.interval}ms")
             return
 
         # Build monitor string
@@ -2253,8 +2268,13 @@ class AntarcticGUI(ctk.CTk):
 
         # Show current delay
         parts.append(f"Delay:{self.clicker.last_delay_ms:.1f}ms")
-
-        # Mostrar informacion basica del timing
+        
+        # Show multiplier/pattern being used
+        pattern_str = self.clicker.config.click_pattern.strip() if self.clicker.config.click_pattern else ""
+        if pattern_str:
+            parts.append(f"Patrón:{pattern_str}")
+        else:
+            parts.append(f"x{self.clicker.config.multiplier}")
 
         monitor_text = " | ".join(parts)
         self.timing_monitor_label.configure(text=monitor_text)
