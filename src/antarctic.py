@@ -227,6 +227,8 @@ class ClickConfig:
         self.interval = 1  # Intervalo: Tiempo entre cada clic (en ms)
         self.multiplier = 1  # Multiplicador: Cantidad de clics por grupo
         self.delay = 0  # Delay: Retraso inicial (en ms)
+        self.random_interval = False  # Random interval 1-75ms
+        self.random_multiplier = False  # Random multiplier 1-10
         
         # Configuraciones internas necesarias
         self.mouse_button = 'left'
@@ -243,7 +245,7 @@ class ClickConfig:
         for key, value in data.items():
             if hasattr(self, key):
                 # Type conversion for boolean fields
-                boolean_fields = ['auto_burst_enabled']
+                boolean_fields = ['auto_burst_enabled', 'random_interval', 'random_multiplier']
                 if key in boolean_fields:
                     value = bool(value)
                 setattr(self, key, value)
@@ -417,7 +419,11 @@ class AutoClicker:
 
     def get_timing_delay(self):
         # Intervalo: Tiempo entre cada clic (en ms, convertir a segundos)
-        base_delay = self.config.interval / 1000.0
+        if self.config.random_interval:
+            # Random entre 1-75ms
+            base_delay = random.uniform(1, 75) / 1000.0
+        else:
+            base_delay = self.config.interval / 1000.0
 
         # Asegurar delay minimo y almacenar para monitoreo
         final_delay = max(0.0001, base_delay)  # Minimo 0.1ms
@@ -561,12 +567,16 @@ class AutoClicker:
             clicks_sent = 0
             stats_update_interval = 50  # Reducir frecuencia de callbacks para mayor rendimiento
             
-            # Usar el multiplicador para cantidad de clics por grupo
-            clicks_per_group = self.config.multiplier
+            # Configurar randomización de multiplicador
+            use_random_mult = self.config.random_multiplier
 
             # === LOOP OPTIMIZADO: Solo llamadas estrictamente necesarias ===
             while clicks_sent < total_clicks_limit and self.running:
                 # Determinar cuantos clics enviar en este grupo
+                if use_random_mult:
+                    clicks_per_group = random.randint(1, 10)
+                else:
+                    clicks_per_group = self.config.multiplier
                 clicks_in_group = min(clicks_per_group, total_clicks_limit - clicks_sent)
                 
                 # Enviar el grupo de clics (minimas system calls)
@@ -654,11 +664,17 @@ class AutoClicker:
             clicks_sent = 0
             stats_update_interval = 50  # Reducir frecuencia de callbacks para mayor rendimiento
             
-            # Usar el multiplicador para cantidad de clics por grupo
-            clicks_per_group = self.config.multiplier
+            # Configurar randomización de multiplicador
+            use_random_mult = self.config.random_multiplier
 
             # === LOOP CONTINUO: Sin límite de clicks, solo se detiene cuando F1 se suelta ===
             while self.f1_continuous_active and self.running:
+                # Determinar cuantos clics enviar en este grupo
+                if use_random_mult:
+                    clicks_per_group = random.randint(1, 10)
+                else:
+                    clicks_per_group = self.config.multiplier
+                    
                 # Enviar el grupo de clics (mínimas system calls)
                 for i in range(clicks_per_group):
                     if not self.f1_continuous_active or not self.running:
@@ -973,7 +989,7 @@ class AntarcticGUI(ctk.CTk):
     def __init__(self, key_manager):
         super().__init__()
         self.title("ANTARCTIC")
-        self.geometry("400x620")  # Tamaño optimizado
+        self.geometry("400x570")  # Tamaño optimizado
         self.resizable(False, False)
 
         # Set window icon
@@ -1438,19 +1454,23 @@ class AntarcticGUI(ctk.CTk):
         )
         self.interval_entry = self.create_numeric_input(
             self.sliders_content, "Intervalo (ms)", 1, 0.1, 1000,
-            lambda v: self.update_config('interval', v, float)
+            lambda v: self.update_config('interval', v, float),
+            random_checkbox=True,
+            random_callback=lambda v: self.update_config('random_interval', v, bool)
         )
         self.multiplier_entry = self.create_numeric_input(
             self.sliders_content, "Multiplicador", 1, 1, 100,
-            lambda v: self.update_config('multiplier', v, int)
+            lambda v: self.update_config('multiplier', v, int),
+            random_checkbox=True,
+            random_callback=lambda v: self.update_config('random_multiplier', v, bool)
         )
         self.delay_entry = self.create_numeric_input(
             self.sliders_content, "Delay (ms)", 0, 0, 300,
             lambda v: self.update_config('delay', v, int)
         )
 
-    def create_numeric_input(self, parent, label_text, default_value, min_val, max_val, callback):
-        """Create a polished numeric input with +/- buttons"""
+    def create_numeric_input(self, parent, label_text, default_value, min_val, max_val, callback, random_checkbox=False, random_callback=None):
+        """Create a polished numeric input with +/- buttons and optional random checkbox"""
         container = ctk.CTkFrame(parent, fg_color="transparent")
         container.pack(fill="x", pady=5)
         
@@ -1466,9 +1486,30 @@ class AntarcticGUI(ctk.CTk):
             anchor="w"
         ).pack(side="left")
         
-        # Control frame (entry + buttons)
+        # Control frame (entry + buttons + checkbox)
         control_frame = ctk.CTkFrame(container, fg_color="transparent")
         control_frame.pack(side="right")
+        
+        # Random checkbox (optional)
+        if random_checkbox and random_callback:
+            random_var = ctk.BooleanVar(value=False)
+            random_check = ctk.CTkCheckBox(
+                control_frame,
+                text="R",
+                variable=random_var,
+                command=lambda: random_callback(random_var.get()),
+                width=30,
+                height=30,
+                checkbox_width=16,
+                checkbox_height=16,
+                corner_radius=4,
+                text_color=COLORS['text_dim'],
+                fg_color=COLORS['accent_green'],
+                hover_color=COLORS['accent_green'],
+                font=("Segoe UI", 8, "bold")
+            )
+            random_check.pack(side="left", padx=(0, 5))
+            ToolTip(random_check, "Randomizar valor")
         
         # Decrease button
         decrease_btn = ctk.CTkButton(
