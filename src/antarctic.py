@@ -227,7 +227,6 @@ class ClickConfig:
         self.interval = 1  # Intervalo: Tiempo entre cada clic (en ms)
         self.multiplier = 1  # Multiplicador: Cantidad de clics por grupo
         self.delay = 0  # Delay: Retraso inicial (en ms)
-        self.click_pattern = ""  # Patron de clics (ej: "3,2,1") - opcional
         
         # Configuraciones internas necesarias
         self.mouse_button = 'left'
@@ -562,30 +561,13 @@ class AutoClicker:
             clicks_sent = 0
             stats_update_interval = 50  # Reducir frecuencia de callbacks para mayor rendimiento
             
-            # Determinar patron de clics y pre-cachearlo
-            click_pattern = []
-            pattern_str = self.config.click_pattern.strip() if self.config.click_pattern else ""
-            
-            if pattern_str:  # Si hay patrón definido, usarlo
-                try:
-                    parsed_pattern = [int(x.strip()) for x in pattern_str.split(',') if x.strip()]
-                    if parsed_pattern and all(n > 0 for n in parsed_pattern):
-                        click_pattern = parsed_pattern
-                except:
-                    pass
-            
-            # Si no hay patrón válido, usar el multiplicador
-            if not click_pattern:
-                click_pattern = [self.config.multiplier]
-            
-            pattern_len = len(click_pattern)
-            pattern_index = 0
+            # Usar el multiplicador para cantidad de clics por grupo
+            clicks_per_group = self.config.multiplier
 
             # === LOOP OPTIMIZADO: Solo llamadas estrictamente necesarias ===
             while clicks_sent < total_clicks_limit and self.running:
                 # Determinar cuantos clics enviar en este grupo
-                clicks_in_group = click_pattern[pattern_index % pattern_len]
-                clicks_in_group = min(clicks_in_group, total_clicks_limit - clicks_sent)
+                clicks_in_group = min(clicks_per_group, total_clicks_limit - clicks_sent)
                 
                 # Enviar el grupo de clics (minimas system calls)
                 for i in range(clicks_in_group):
@@ -600,8 +582,6 @@ class AutoClicker:
                     self.total_clicks_sent += 1
                     self.current_burst_clicks += 1
                     clicks_sent += 1
-
-                pattern_index += 1
 
                 # Delay entre grupos (solo si es necesario) - Timer de alta precisión
                 if clicks_sent < total_clicks_limit:
@@ -674,32 +654,13 @@ class AutoClicker:
             clicks_sent = 0
             stats_update_interval = 50  # Reducir frecuencia de callbacks para mayor rendimiento
             
-            # Determinar patrón de clics y pre-cachearlo
-            click_pattern = []
-            pattern_str = self.config.click_pattern.strip() if self.config.click_pattern else ""
-            
-            if pattern_str:  # Si hay patrón definido, usarlo
-                try:
-                    parsed_pattern = [int(x.strip()) for x in pattern_str.split(',') if x.strip()]
-                    if parsed_pattern and all(n > 0 for n in parsed_pattern):
-                        click_pattern = parsed_pattern
-                except:
-                    pass
-            
-            # Si no hay patrón válido, usar el multiplicador
-            if not click_pattern:
-                click_pattern = [self.config.multiplier]
-            
-            pattern_len = len(click_pattern)
-            pattern_index = 0
+            # Usar el multiplicador para cantidad de clics por grupo
+            clicks_per_group = self.config.multiplier
 
             # === LOOP CONTINUO: Sin límite de clicks, solo se detiene cuando F1 se suelta ===
             while self.f1_continuous_active and self.running:
-                # Determinar cuantos clics enviar en este grupo
-                clicks_in_group = click_pattern[pattern_index % pattern_len]
-                
                 # Enviar el grupo de clics (mínimas system calls)
-                for i in range(clicks_in_group):
+                for i in range(clicks_per_group):
                     if not self.f1_continuous_active or not self.running:
                         break
 
@@ -713,12 +674,10 @@ class AutoClicker:
                     clicks_sent += 1
                     
                     # Delay después de cada clic individual (respetar interval) - Timer de alta precisión
-                    if i < clicks_in_group - 1 or self.f1_continuous_active:
+                    if i < clicks_per_group - 1 or self.f1_continuous_active:
                         delay = get_delay()
                         if delay > 0:
                             precise_sleep(delay)
-
-                pattern_index += 1
 
                 # Stats update (reducido, evita spam de callbacks)
                 if clicks_sent % stats_update_interval == 0 and self.gui_callback:
@@ -1489,11 +1448,6 @@ class AntarcticGUI(ctk.CTk):
             self.sliders_content, "Delay (ms)", 0, 0, 300,
             lambda v: self.update_config('delay', v, int)
         )
-        
-        # Patron de clics (opcional)
-        self.pattern_entry = self.create_pattern_input(
-            self.sliders_content, "Patrón (opcional)", ""
-        )
 
     def create_numeric_input(self, parent, label_text, default_value, min_val, max_val, callback):
         """Create a polished numeric input with +/- buttons"""
@@ -1615,159 +1569,7 @@ class AntarcticGUI(ctk.CTk):
                 entry.delete(0, "end")
                 entry.insert(0, str(int(min_val)))
     
-    def create_pattern_input(self, parent, label_text, default_value):
-        """Create a polished text input for click pattern"""
-        container = ctk.CTkFrame(parent, fg_color="transparent")
-        container.pack(fill="x", pady=5)
-        
-        # Label with help icon
-        label_frame = ctk.CTkFrame(container, fg_color="transparent")
-        label_frame.pack(side="left", fill="x", expand=True)
-        
-        ctk.CTkLabel(
-            label_frame,
-            text=label_text,
-            font=("Segoe UI", 9, "bold"),
-            text_color=COLORS['text_primary'],
-            anchor="w"
-        ).pack(side="left")
-        
-        # Help icon
-        help_icon = ctk.CTkLabel(
-            label_frame,
-            text="?",
-            font=("Segoe UI", 8),
-            text_color=COLORS['text_dim'],
-            width=12
-        )
-        help_icon.pack(side="left", padx=(4, 0))
-        ToolTip(help_icon, "Patrón de clics: ej. '3,2,1' = 3 clics, pausa, 2 clics, pausa, 1 clic.\nSi está vacío, usa el Multiplicador normal.")
-        
-        # Right side frame for entry and button
-        right_frame = ctk.CTkFrame(container, fg_color="transparent")
-        right_frame.pack(side="right")
-        
-        # Random pattern button
-        random_btn = ctk.CTkButton(
-            right_frame,
-            text="🎲",
-            width=30,
-            height=30,
-            font=("Segoe UI", 13),
-            fg_color=COLORS['bg_secondary'],
-            hover_color=COLORS['accent_blue'],
-            text_color=COLORS['text_primary'],
-            corner_radius=6,
-            command=lambda: self.generate_random_pattern(entry)
-        )
-        random_btn.pack(side="left", padx=(0, 5))
-        ToolTip(random_btn, "Generar patrón aleatorio eficaz")
-        
-        # Entry field
-        entry = ctk.CTkEntry(
-            right_frame,
-            width=140,
-            height=30,
-            font=("Segoe UI", 10),
-            fg_color=COLORS['bg_primary'],
-            border_color=COLORS['accent_blue'],
-            border_width=2,
-            text_color=COLORS['text_primary'],
-            placeholder_text="ej: 3,2,1",
-            justify="center"
-        )
-        entry.pack(side="left")
-        entry.insert(0, default_value)
-        
-        # Bind events
-        entry.bind("<Return>", lambda e: self.validate_pattern_input(entry))
-        entry.bind("<FocusOut>", lambda e: self.validate_pattern_input(entry))
-        
-        return entry
-    
-    def generate_random_pattern(self, entry):
-        """Generate a random but effective click pattern"""
-        # Pattern length: 6-10 groups (balanced)
-        pattern_length = random.randint(6, 10)
-        
-        # Click values pool with weighted distribution
-        # More 1s and 2s (70%), fewer 3s and 4s (30%)
-        click_values = [1, 1, 1, 2, 2, 2, 3, 4]
-        
-        pattern = []
-        last_value = None
-        consecutive_count = 0
-        
-        for i in range(pattern_length):
-            # Get a random value
-            value = random.choice(click_values)
-            
-            # Avoid more than 2 consecutive identical values (more natural)
-            if value == last_value:
-                consecutive_count += 1
-                if consecutive_count >= 2:
-                    # Force different value
-                    available = [v for v in click_values if v != last_value]
-                    value = random.choice(available)
-                    consecutive_count = 0
-            else:
-                consecutive_count = 0
-            
-            pattern.append(value)
-            last_value = value
-        
-        # Convert to string format
-        pattern_str = ','.join(map(str, pattern))
-        
-        # Update entry field
-        entry.delete(0, "end")
-        entry.insert(0, pattern_str)
-        
-        # Validate and apply
-        self.validate_pattern_input(entry)
-        
-        # Show brief feedback
-        if hasattr(self, 'status_label'):
-            original_text = self.status_label.cget("text")
-            self.status_label.configure(text=f"Patrón generado: {pattern_str}")
-            # Restore original text after 2 seconds
-            self.after(2000, lambda: self.status_label.configure(text=original_text))
-    
-    def validate_pattern_input(self, entry):
-        """Validate and apply pattern input"""
-        pattern = entry.get().strip()
-        
-        # Empty is valid (uses multiplier instead)
-        if not pattern:
-            self.clicker.config.click_pattern = ""
-            return
-        
-        # Validate format: only numbers and commas
-        import re
-        if not re.match(r'^[\d,\s]+$', pattern):
-            entry.delete(0, "end")
-            entry.insert(0, "")
-            self.clicker.config.click_pattern = ""
-            return
-        
-        # Parse and validate numbers
-        try:
-            numbers = [int(x.strip()) for x in pattern.split(',') if x.strip()]
-            if not numbers or any(n <= 0 for n in numbers):
-                entry.delete(0, "end")
-                entry.insert(0, "")
-                self.clicker.config.click_pattern = ""
-                return
-            
-            # Valid pattern
-            clean_pattern = ','.join(map(str, numbers))
-            entry.delete(0, "end")
-            entry.insert(0, clean_pattern)
-            self.clicker.config.click_pattern = clean_pattern
-        except:
-            entry.delete(0, "end")
-            entry.insert(0, "")
-            self.clicker.config.click_pattern = ""
+
     
     def update_config(self, attr, value, type_conv):
         """Update config attribute with type conversion"""
