@@ -1066,9 +1066,6 @@ class AntarcticGUI(ctk.CTk):
         # Controls section
         self.create_controls(main_container)
 
-        # Action buttons
-        self.create_action_buttons(main_container)
-
         # Footer
         self.create_footer(main_container)
     
@@ -1879,7 +1876,6 @@ class AntarcticGUI(ctk.CTk):
 
     def toggle_auto_burst(self):
         self.clicker.config.auto_burst_enabled = not self.clicker.config.auto_burst_enabled
-        self.sync_auto_burst_state()
 
     def toggle_advanced_timing(self):
         pass
@@ -2028,8 +2024,6 @@ class AntarcticGUI(ctk.CTk):
             self._safe_after(0, self.update_connection_status)
         elif event == 'stats_update':
             self._safe_after(0, self.update_stats)
-        elif event == 'auto_burst_toggled':
-            self._safe_after(0, self.sync_auto_burst_state)
 
     def _safe_after(self, delay, callback, *args):
         """Schedule a callback and track it for cleanup"""
@@ -2122,21 +2116,6 @@ class AntarcticGUI(ctk.CTk):
         monitor_text = " | ".join(parts)
         self.timing_monitor_label.configure(text=monitor_text)
         
-    def sync_auto_burst_state(self):
-        if self.clicker.config.auto_burst_enabled:
-            self.autoburst_button.configure(
-                text="AUTO-BURST: ON",
-                fg_color=COLORS['accent_blue'],
-                border_color=COLORS['accent_blue'],
-                text_color=COLORS['bg_primary']
-            )
-        else:
-            self.autoburst_button.configure(
-                text="AUTO-BURST",
-                fg_color=COLORS['bg_card'],
-                border_color=COLORS['accent_blue'],
-                text_color=COLORS['text_primary']
-            )
 
     def load_last_profile(self):
         current = self.profile_manager.get_current_profile()
