@@ -229,6 +229,7 @@ class ClickConfig:
         self.delay = 0  # Delay: Retraso inicial (en ms)
         self.random_interval = False  # Random interval 1-75ms
         self.random_multiplier = False  # Random multiplier 1-10
+        self.perfect_machine = False  # Perfect machine mode: zero variation, exact timing
         
         # Configuraciones internas necesarias
         self.mouse_button = 'left'
@@ -245,7 +246,7 @@ class ClickConfig:
         for key, value in data.items():
             if hasattr(self, key):
                 # Type conversion for boolean fields
-                boolean_fields = ['auto_burst_enabled', 'random_interval', 'random_multiplier']
+                boolean_fields = ['auto_burst_enabled', 'random_interval', 'random_multiplier', 'perfect_machine']
                 if key in boolean_fields:
                     value = bool(value)
                 setattr(self, key, value)
@@ -418,6 +419,13 @@ class AutoClicker:
         return x, y
 
     def get_timing_delay(self):
+        # Perfect Machine Mode: Intervalos matemáticamente exactos, sin variación
+        if self.config.perfect_machine:
+            # Modo máquina perfecta: intervalo exacto sin ningún ajuste
+            exact_delay = self.config.interval / 1000.0
+            self.last_delay_ms = exact_delay * 1000.0
+            return exact_delay
+        
         # Intervalo: Tiempo entre cada clic (en ms, convertir a segundos)
         if self.config.random_interval:
             # Random entre 1-75ms
@@ -1099,6 +1107,32 @@ class AntarcticGUI(ctk.CTk):
             text_color=COLORS['text_dim']
         )
         self.coords_label.pack(side="left", expand=True)
+
+        # Perfect Machine Mode toggle
+        perfect_frame = ctk.CTkFrame(status_frame, fg_color="transparent")
+        perfect_frame.pack(side="right", padx=(0, 8))
+        
+        ctk.CTkLabel(
+            perfect_frame,
+            text="⚙",
+            font=("Segoe UI", 11),
+            text_color=COLORS['text_dim']
+        ).pack(side="left", padx=(0, 4))
+        
+        self.perfect_machine_var = ctk.BooleanVar(value=False)
+        self.perfect_machine_switch = ctk.CTkSwitch(
+            perfect_frame,
+            text="",
+            variable=self.perfect_machine_var,
+            command=self.toggle_perfect_machine,
+            width=36,
+            height=18,
+            progress_color=COLORS['accent_cyan'],
+            button_color=COLORS['bg_primary'],
+            button_hover_color=COLORS['accent_blue']
+        )
+        self.perfect_machine_switch.pack(side="left")
+        ToolTip(perfect_frame, "Perfect Machine: Intervalos matemáticamente exactos sin variación")
 
         # Stats - right side
         self.stats_label = ctk.CTkLabel(
@@ -1871,6 +1905,16 @@ class AntarcticGUI(ctk.CTk):
 
     def toggle_humanization(self):
         pass
+
+    def toggle_perfect_machine(self):
+        """Toggle Perfect Machine Mode - desactiva random modes si se activa"""
+        is_enabled = self.perfect_machine_var.get()
+        self.clicker.config.perfect_machine = is_enabled
+        
+        # Si se activa Perfect Machine, desactivar modos random (son incompatibles)
+        if is_enabled:
+            self.clicker.config.random_interval = False
+            self.clicker.config.random_multiplier = False
 
 
 
