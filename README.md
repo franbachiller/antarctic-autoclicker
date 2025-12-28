@@ -1,5 +1,9 @@
 # Antarctic Autoclicker
 
+<!-- Uncomment when demo GIF is ready
+![Antarctic Demo](assets/demo/antarctic_demo.gif)
+-->
+
 Advanced autoclicker system with license management, latency compensation, and sophisticated timing algorithms. Built with Python and deployed on Vercel.
 
 ## Overview
