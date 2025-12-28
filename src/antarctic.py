@@ -2366,18 +2366,36 @@ class AntarcticGUI(ctk.CTk):
         self.mainloop()
 
 if __name__ == "__main__":
-    key_manager = KeyManager()
+    # Development mode detection: si se ejecuta desde src/antarctic.py, modo desarrollo
+    is_dev_mode = not getattr(sys, 'frozen', False)
     
-    # Check if already activated
-    if not key_manager.is_activated():
-        # Show activation window
-        activation_window = ActivationWindow()
-        activation_success = activation_window.run()
+    if is_dev_mode:
+        print("=" * 60)
+        print("ANTARCTIC - DEVELOPMENT MODE")
+        print("=" * 60)
+        print("Running without license validation (development mode)")
+        print("License system is bypassed when running from source")
+        print("=" * 60)
         
-        # If activation failed or user closed window, exit
-        if not activation_success:
-            sys.exit(0)
-    
-    # If activated, show main GUI
-    app = AntarcticGUI(key_manager=key_manager)
-    app.run()
+        # Crear key_manager dummy para desarrollo
+        key_manager = KeyManager()
+        # Bypass license check - ir directo a la GUI
+        app = AntarcticGUI(key_manager=key_manager)
+        app.run()
+    else:
+        # Production mode: require license
+        key_manager = KeyManager()
+        
+        # Check if already activated
+        if not key_manager.is_activated():
+            # Show activation window
+            activation_window = ActivationWindow()
+            activation_success = activation_window.run()
+            
+            # If activation failed or user closed window, exit
+            if not activation_success:
+                sys.exit(0)
+        
+        # If activated, show main GUI
+        app = AntarcticGUI(key_manager=key_manager)
+        app.run()
