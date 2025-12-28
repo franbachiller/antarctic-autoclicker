@@ -1,3 +1,7 @@
+# ============================================
+# Python
+# ============================================
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -30,9 +34,6 @@ MANIFEST
 # PyInstaller
 *.manifest
 *.spec
-*.exe
-*.dll
-*.dylib
 
 # Installer logs
 pip-log.txt
@@ -88,7 +89,7 @@ ipython_config.py
 # pipenv
 Pipfile.lock
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+# PEP 582
 __pypackages__/
 
 # Celery stuff
@@ -100,6 +101,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
+.env.*.local
 .venv
 env/
 venv/
@@ -127,42 +130,117 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Project specific
-logs/
-*.log
-config.json
-antarctic_session.dat
-.antarctic/
-profiles/
-backups/
-obfuscated/
-release/
-.coverage
-.pytest_cache/
-.mypy_cache/
+# ============================================
+# Node.js
+# ============================================
 
-# IDE
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ============================================
+# IDEs and Editors
+# ============================================
+
+# Visual Studio Code
 .vscode/
+*.code-workspace
+
+# JetBrains IDEs
 .idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim
 *.swp
 *.swo
 *~
 
-# OS
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ============================================
+# Operating Systems
+# ============================================
+
+# macOS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
+.AppleDouble
+.LSOverride
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================
+# Project Specific
+# ============================================
+
+# Compiled executables
+*.exe
+*.dll
+*.dylib
+
+# Logs
+logs/
+*.log
+
+# Configuration files with sensitive data
+config.json
+antarctic_session.dat
+.antarctic/
+
+# User profiles and data
+profiles/
+backups/
+
+# Build artifacts
+obfuscated/
+release/
+
+# PyArmor
+.pyarmor/
+pyarmor_runtime*/
 
 # Temporary files
 *.tmp
 *.temp
 .cache/
+
+# Vercel
 .vercel
 
-# Node.js
-node_modules/
-package-lock.json
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials/

@@ -1,174 +1,268 @@
-# 🎯 Antarctic Autoclicker
+# Antarctic Autoclicker
 
-Sistema profesional de autoclicker con sistema de licencias y actualizaciones automáticas.
+Advanced autoclicker system with license management, latency compensation, and sophisticated timing algorithms. Built with Python and deployed on Vercel.
 
-## 📁 Estructura del Proyecto
+## Overview
+
+Antarctic is a professional-grade autoclicker featuring real-time license validation, advanced latency compensation for online games, and multiple timing profiles including Markov chains, Gaussian distribution, and acceleration patterns. The system includes a complete backend API, admin panel, and public website.
+
+## Key Features
+
+- **Advanced Click System**: Single, double, and triple click modes with configurable timing
+- **Latency Compensation**: Real-time RTT measurement and automatic timing adjustment for online games
+- **Timing Algorithms**: 
+  - Markov Chain: Realistic human-like patterns
+  - Gaussian Distribution: Natural variation around target interval
+  - Acceleration: Progressive speed increase
+  - Perfect Machine: Zero-variance mathematical precision
+- **License Management**: Online validation system with Supabase backend
+- **Profile System**: Save and load multiple configurations
+- **Security**: PyArmor obfuscation, anti-debugging, HWID binding
+- **Modern GUI**: Built with CustomTkinter
+
+## Technology Stack
+
+**Frontend/Client:**
+- Python 3.8+
+- CustomTkinter (Modern UI)
+- PyInstaller (Executable compilation)
+- PyArmor (Code obfuscation)
+
+**Backend/API:**
+- Node.js
+- Vercel Serverless Functions
+- Supabase (Database & Authentication)
+
+**Security:**
+- HWID-based license binding
+- Fernet encryption (AES-128)
+- Anti-debugging mechanisms
+- Session token validation
+
+## Project Structure
 
 ```
 Antarctic/
-├── src/                          # 💻 Código fuente principal
-│   ├── antarctic.py             # Aplicación principal con GUI
-│   ├── auth_client.py           # Cliente de autenticación de licencias
-│   ├── latency_compensator.py   # Sistema de compensación de latencia
-│   └── security.py              # Módulo de seguridad
+├── src/                          # Core application source
+│   ├── antarctic.py              # Main application with GUI
+│   ├── auth_client.py            # License authentication client
+│   ├── latency_compensator.py   # Latency measurement and compensation
+│   └── security.py               # Security and anti-debugging
 │
-├── api/                          # 🌐 Backend de validación (Vercel)
-│   ├── activate.js              # Endpoint de activación
-│   ├── validate.js              # Endpoint de validación
-│   ├── admin/                   # Panel de administración
-│   │   ├── licenses.js          # Lista de licencias
-│   │   ├── create-license.js    # Crear licencia
-│   │   ├── delete-license.js    # Eliminar licencia
-│   │   ├── ban-license.js       # Banear licencia
-│   │   └── stats.js             # Estadísticas
+├── api/                          # Vercel serverless backend
+│   ├── activate.js               # License activation endpoint
+│   ├── validate.js               # Session validation endpoint
+│   ├── admin/                    # Admin panel endpoints
+│   │   ├── licenses.js           # List licenses
+│   │   ├── create-license.js     # Create license
+│   │   ├── delete-license.js     # Delete license
+│   │   ├── ban-license.js        # Ban license
+│   │   └── stats.js              # Statistics
 │   └── middleware/
-│       └── rate-limit.js        # Rate limiting
+│       └── rate-limit.js         # Rate limiting
 │
-├── admin-panel/                  # 🔐 Panel web de administración
+├── admin-panel/                  # Web admin interface
 │   ├── admin.html
 │   ├── admin-script.js
 │   └── admin-styles.css
 │
-├── website/                      # 🌍 Sitio web público
+├── website/                      # Public website
 │   ├── index.html
 │   ├── script.js
 │   └── styles.css
 │
-├── tools/                        # 🛠️ Scripts de utilidad
-│   ├── create_licenses.py       # Crear licencias masivamente
-│   ├── key_generator.py         # Generar claves
-│   ├── release.py               # Script de release automatizado
-│   ├── create_logo.py           # Generar logos
-│   └── migrate_to_github_releases.py
+├── tools/                        # Utility scripts
+│   ├── create_licenses.py        # Bulk license creation
+│   ├── key_generator.py          # License key generator
+│   ├── release.py                # Automated release script
+│   └── create_logo.py            # Logo generation
 │
-├── assets/                       # 🎨 Recursos gráficos
+├── assets/                       # Graphics resources
 │   ├── icon.ico
 │   ├── logo.png
 │   └── logo_compact.png
 │
-├── dist/                         # 📦 Ejecutable compilado
-│   └── Antarctic.exe
-│
-├── compile_antarctic.bat         # Compilar el proyecto
-├── clean_project.bat             # Limpiar archivos temporales
-├── auto_release.bat              # Release automatizado
-├── release.bat                   # Release manual
-├── package.json                  # Dependencias de Node.js
-├── vercel.json                   # Configuración de Vercel
-└── set_env.bat                   # Variables de entorno (no en git)
+└── dist/                         # Compiled executable
+    └── Antarctic.exe
 ```
 
-## 🚀 Uso Rápido
+## Installation
 
-### Ejecutar en modo desarrollo
+### Prerequisites
+
+- Python 3.8 or higher
+- Node.js 14+ (for API development)
+- Git
+
+### Python Dependencies
+
 ```bash
-python src/antarctic.py
+pip install -r requirements.txt
 ```
 
-### Compilar ejecutable
-```bash
-compile_antarctic.bat
-```
-
-### Limpiar archivos temporales
-```bash
-clean_project.bat
-```
-
-### Crear un release
-```bash
-auto_release.bat
-```
-
-## 🔧 Desarrollo
-
-### Requisitos
-- Python 3.8+
-- PyInstaller
+Required packages:
 - customtkinter
-- Pillow
+- pillow
 - requests
 - cryptography
 - websocket-client
+- pyinstaller
+- pyarmor
 
-### Instalar dependencias de Python
-```bash
-pip install customtkinter pillow requests cryptography websocket-client pyinstaller pyarmor
-```
+### Node.js Dependencies
 
-### Instalar dependencias de Node.js (para API)
 ```bash
 npm install
 ```
 
-## 📝 Sistema de Licencias
+## Usage
 
-El sistema usa Supabase para validación de licencias en tiempo real:
-- **Activación**: Valida la clave contra la base de datos
-- **Validación**: Verifica licencia activa periódicamente
-- **Offline mode**: Modo de gracia de 1 hora sin conexión
-- **Tipos de licencia**: 1 día, 7 días, 30 días, lifetime
+### Development Mode
 
-## 🎮 Características
+Run the application directly from source:
 
-- ✅ Sistema de clics configurable (single/double/triple)
-- ✅ Compensación de latencia avanzada
-- ✅ Perfiles de configuración
-- ✅ Timing avanzado (Markov, Gaussian, Acceleration)
-- ✅ Hotkeys (F2, F3, F5)
-- ✅ Auto-burst con clic izquierdo
-- ✅ GUI moderna con customtkinter
-
-## 📦 Compilación
-
-### Compilar el proyecto
 ```bash
-# Opción 1: Script rápido (recomendado)
+python src/antarctic.py
+```
+
+### Build Executable
+
+Compile the application into a standalone executable:
+
+```bash
 compile_antarctic.bat
-
-# Opción 2: Compilar manualmente desde build/
-cd build
-compile.bat
 ```
 
-### Proceso de compilación
-El script `compile_antarctic.bat` realiza:
-1. **Ofuscación con PyArmor** (Nivel 5/5):
-   - `auth_client.py` → Ofuscado (protección de licencias)
-   - `security.py` → Ofuscado (anti-debugging)
-   - `antarctic.py` → Sin ofuscar (demasiado grande para PyArmor trial)
+The executable will be generated in `dist/Antarctic.exe` (~34 MB).
 
-2. **Preparación de archivos**:
-   - Copia assets (iconos, logos)
-   - Copia módulos auxiliares (latency_compensator)
+### Clean Build Artifacts
 
-3. **Compilación con PyInstaller**:
-   - Genera ejecutable único (`--onefile`)
-   - Modo ventana (`--windowed`)
-   - Icono personalizado
-   - Runtime de PyArmor incluido
+Remove temporary compilation files:
 
-4. **Resultado**:
-   - Ejecutable: `dist/Antarctic.exe`
-   - Tamaño: ~34 MB
-   - Protección máxima implementada
-
-### Limpiar archivos temporales de compilación
 ```bash
-cd build
-clean.bat
+clean_project.bat
 ```
 
-## 🌐 Deploy
+### Create Release
 
-### Vercel (API y Website)
+Automated release process with version tagging:
+
+```bash
+auto_release.bat
+```
+
+## License System
+
+The application uses Supabase for real-time license validation:
+
+- **Activation**: Validates license key against database and binds to hardware ID
+- **Validation**: Periodic session verification with the server
+- **Offline Mode**: 1-hour grace period when server is unreachable
+- **License Types**: 1 day, 7 days, 30 days, lifetime
+
+### HWID Binding
+
+Each license is bound to a unique hardware identifier generated from:
+- Machine name
+- Processor information
+- System type
+- MAC address
+
+## Latency Compensation
+
+The latency compensator connects to the game via Chrome DevTools Protocol to measure real-time network latency:
+
+1. Connect to game's DevTools port (default: 9222)
+2. Monitor WebSocket frames between client and server
+3. Calculate RTT (Round Trip Time) from frame pairs
+4. Automatically adjust click timing to compensate for network delay
+
+**Calibration Process:**
+- Collects RTT samples over 10 seconds
+- Calculates optimal offset using 25th percentile
+- Applies compensation multiplier (0.0 - 2.0)
+
+## Compilation Process
+
+The `compile_antarctic.bat` script performs:
+
+1. **Code Obfuscation** (PyArmor Level 5/5):
+   - `auth_client.py` - License protection
+   - `security.py` - Anti-debugging
+   - `antarctic.py` - Main application (excluded due to size)
+
+2. **Asset Preparation**:
+   - Copy icons and logos
+   - Include auxiliary modules
+
+3. **PyInstaller Compilation**:
+   - Single-file executable (`--onefile`)
+   - Windowed mode (`--windowed`)
+   - Custom icon
+   - PyArmor runtime included
+
+4. **Output**:
+   - Executable: `dist/Antarctic.exe`
+   - Size: ~34 MB
+   - Maximum protection applied
+
+## Deployment
+
+### Vercel (API & Website)
+
+The API and website are automatically deployed to Vercel:
+
 ```bash
 vercel deploy
 ```
 
-La API y el sitio web se despliegan automáticamente en Vercel.
+Configuration is defined in `vercel.json`.
 
-## 📄 Licencia
+### Environment Variables
 
-Proyecto privado - Todos los derechos reservados
+Create a `set_env.bat` file (not tracked in git) with:
 
+```batch
+set SUPABASE_URL=your_supabase_url
+set SUPABASE_KEY=your_supabase_key
+set ADMIN_PASSWORD=your_admin_password
+```
+
+## Security Features
+
+- **PyArmor Obfuscation**: Level 5 protection on critical modules
+- **Anti-Debugging**: Detects and prevents debugger attachment
+- **HWID Binding**: Licenses tied to specific hardware
+- **Session Encryption**: AES-128 encryption for local session storage
+- **Rate Limiting**: API endpoints protected against abuse
+
+## Development
+
+### Code Style
+
+- Follow PEP 8 guidelines
+- Use type hints where applicable
+- Document complex algorithms
+- Keep functions focused and modular
+
+### Testing
+
+Test the license system:
+
+```bash
+python src/auth_client.py
+```
+
+Test latency compensation:
+
+```bash
+python src/latency_compensator.py
+```
+
+## License
+
+Private project - All rights reserved
+
+## Author
+
+Francisco - [GitHub](https://github.com/Narfbach)
