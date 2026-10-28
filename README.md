@@ -72,3 +72,5 @@ Empezó en octubre de 2025 como autoclicker con un sistema de patrones de clic. 
 ## Licencia
 
 MIT. Ver [LICENSE](LICENSE).
+
+> Nota: el workflow de CI está en `ci/release.yml.txt`. Moverlo a `.github/workflows/release.yml` para activarlo (requiere permiso de workflows al subir).
