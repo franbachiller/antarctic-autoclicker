@@ -44,7 +44,7 @@ Funciones serverless de Vercel sobre Supabase:
 | `GET /api/admin/licenses` · `stats` | Listado y métricas |
 | `POST /api/admin/create-license` · `ban-license` · `delete-license` | Gestión de licencias |
 
-Los endpoints públicos tienen rate limiting por identificador (5 solicitudes por minuto por defecto) y las credenciales de Supabase se leen de variables de entorno. Detalle en [docs/API.md](docs/API.md) y [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Los endpoints públicos tienen rate limiting por identificador (10 activaciones y 20 validaciones por minuto por IP) y las credenciales de Supabase se leen de variables de entorno. Detalle en [docs/API.md](docs/API.md) y [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Web y panel
 
